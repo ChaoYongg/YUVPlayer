@@ -71,6 +71,11 @@ int32 CDiffPicDlg::initial()
 	u8DiffMode			= BIN_MODE;
 	s8DlgIdx			= 2;   //++ 两图对比只可能有两幅图像，该值为 2 才能复用 adjust_window_position 函数
     u8SampleFormat		= pImage0->u8SampleFormat;
+	u8Sample_x = pImage0->u8Sample_x;
+	u8Sample_y = pImage0->u8Sample_y;
+#if BITDEPTH
+	u8BitDepth = pImage0->u8BitDepth;
+#endif
 	s32Width			= pImage0->s32SrcWidth;
 	s32Height			= pImage0->s32SrcHeight;
 	s32ZoomWidth		= (pImage0->s32ZoomWidth != pImage1->s32ZoomWidth) ? s32Width : pImage0->s32ZoomWidth;
@@ -126,7 +131,11 @@ int32 CDiffPicDlg::create_window(CWnd *pMainDlg)
 	
 	//++ 创建宏块信息窗口
 	MBInfoDlg.create_window((CWnd *)this);
-	MBInfoDlg.MoveWindow(2 * 425, 0, 425, 470, FALSE);
+#if LCU
+	MBInfoDlg.MoveWindow(2 * 425, 0, 530/*430*/, 490/*490*/, FALSE);
+#endif
+	//MBInfoDlg.MoveWindow(2 * 425, 0, 425, 470, FALSE);
+
 
 	return SUCCEEDED_YUVPlayer;
 }
@@ -261,6 +270,25 @@ void CDiffPicDlg::OnPaint()
     oldSizeRect	= wndRect;
 }
 
+void cal_diff_pic(uint8 *pYUV1, uint8 *pYUV2, LPBYTE pOrigYUV, uint8 u8DiffMode, uint8 *bSameFlag, uint8 u8BitDepth, int32 u32Offset)
+{
+	if (u8BitDepth != BIT_DEPTH8)
+	{
+		int32	s32Diff = abs(((pYUV2[(u32Offset << 1) + 1] << 8) | pYUV2[(u32Offset << 1)]) - ((pYUV1[(u32Offset << 1) + 1] << 8) | pYUV1[(u32Offset << 1)]));
+		s32Diff = u8DiffMode ? ABS(s32Diff) : BIN(s32Diff);
+		pOrigYUV[(u32Offset << 1)] = (s32Diff);
+		pOrigYUV[(u32Offset << 1) + 1] = (s32Diff >> 8);
+
+		(*bSameFlag) &= (!s32Diff);
+	}
+	else
+	{
+		int32	s32Diff = pYUV2[u32Offset] - pYUV1[u32Offset];
+		pOrigYUV[u32Offset] = (u8DiffMode ? ABS(s32Diff) : BIN(s32Diff));
+		(*bSameFlag) &= (!s32Diff);
+	}
+}
+
 void CDiffPicDlg::get_one_frame(uint8 u8ImageMode)
 {
 	int32	i;
@@ -270,59 +298,246 @@ void CDiffPicDlg::get_one_frame(uint8 u8ImageMode)
 	uint8	**pYUV2;
 	CYUVPlayerDlg	*pMainDlg	 = (CYUVPlayerDlg *)this->pMainDlg;
 
+	int32 s32CbWidth = s32Width >> u8Sample_x;;
+	int32 s32CbHeight = s32Height >> u8Sample_y;
 
 	bSameFlag	= TRUE;
 	u32Offset	= 0;
 	pYUV1	 = pMainDlg->pImage[0]->pReadYUV;
 	pYUV2	 = pMainDlg->pImage[1]->pReadYUV;
 
-	switch (u8SampleFormat)
+	switch (u8SampleFormat) //only do y
 	{
-	case YUV420:
-		u32Offset	 = 0;
-		for (j = 0; j < (s32Height >> 1); j++)
-		{
-			for (i = 0; i< (s32Width >> 1); i ++)
-			{
-				int32	s32Diff	 = pYUV2[1][u32Offset] - pYUV1[1][u32Offset];
-				
-				pOrigYUV[1][u32Offset]	 = u8DiffMode ? ABS(s32Diff) : BIN(s32Diff);
-				bSameFlag	&= (!s32Diff);
-				u32Offset ++;
-			}
-		}
-		
-		u32Offset	 = 0;
-		for (j = 0; j < (s32Height >> 1); j++)
-		{
-			for (i = 0; i< (s32Width >> 1); i ++)
-			{
-				int32	s32Diff	 = pYUV2[2][u32Offset] - pYUV1[2][u32Offset];
-				
-				pOrigYUV[2][u32Offset]	 = u8DiffMode ? ABS(s32Diff) : BIN(s32Diff);
-				bSameFlag	&= (!s32Diff);
-				u32Offset ++;
-			}
-		}
 	case YUV400:
-		u32Offset	 = 0;
+	case YUV420:
+	case YUV422:
+	case YUV444:
+	case RGB8:
+	case GBR8:
 		for (j = 0; j < s32Height; j++)
 		{
-			for (i = 0; i< s32Width; i ++)
+			for (i = 0; i < s32Width; i++)
 			{
-				int32	s32Diff	 = pYUV2[0][u32Offset] - pYUV1[0][u32Offset];
-				
-				pOrigYUV[0][u32Offset]	 = u8DiffMode ? ABS(s32Diff) : BIN(s32Diff);
-				bSameFlag	&= (!s32Diff);
-				u32Offset ++;
+				cal_diff_pic(pYUV1[0], pYUV2[0], (pOrigYUV[0]), u8DiffMode, &bSameFlag, u8BitDepth, j*s32Width + i);//Y
 			}
 		}
-		
 		break;
-
 	default:
 		break;
 	}
+
+	switch (u8SampleFormat) //only do u
+	{
+	case YUV420:
+	case YUV422:
+	case YUV444:
+	case RGB8:
+	case GBR8:
+		for (j = 0; j < s32CbHeight; j++)
+		{
+			for (i = 0; i < s32CbWidth; i++)
+			{
+				cal_diff_pic(pYUV1[1], pYUV2[1], pOrigYUV[1], u8DiffMode, &bSameFlag, u8BitDepth, j*s32CbWidth + i);//U
+			}
+		}
+		break;
+	default:
+		break;
+	}
+
+	switch (u8SampleFormat) //only do v
+	{
+	case YUV420:
+	case YUV422:
+	case YUV444:
+	case RGB8:
+	case GBR8:
+		for (j = 0; j < s32CbHeight; j++)
+		{
+			for (i = 0; i < s32CbWidth; i++)
+			{
+				cal_diff_pic(pYUV1[2], pYUV2[2], pOrigYUV[2], u8DiffMode, &bSameFlag, u8BitDepth, j*s32CbWidth + i);//V
+			}
+		}
+		break;
+	default:
+		break;
+	}
+
+// 
+//  	switch (u8SampleFormat)
+//  	{
+//  	case YUV420:
+//  		u32Offset	 = 0;
+// //  		for (j = 0; j < s32Height; j++)
+// //  		{
+// //  			for (i = 0; i< s32Width ; i ++)
+// //  			{
+// //  				cal_diff_pic(pYUV1[0], pYUV2[0], &pOrigYUV[0], u8DiffMode, bSameFlag, u8BitDepth, i);//Y
+// //  			}
+// //  		}	
+// //  
+// //  		for (j = 0; j < s32CbHeight; j++)
+// //  		{
+// //  			for (i = 0; i < s32CbWidth; i++)
+// //  			{
+// //  				cal_diff_pic(pYUV1[1], pYUV2[1], &pOrigYUV[1], u8DiffMode, bSameFlag, u8BitDepth, i);//U
+// //  			}
+// //  		}
+// //  
+// //  		for (j = 0; j < s32CbHeight; j++)
+// //  		{
+// //  			for (i = 0; i < s32CbWidth; i++)
+// //  			{
+// //  				cal_diff_pic(pYUV1[2], pYUV2[2], &pOrigYUV[2], u8DiffMode, bSameFlag, u8BitDepth, i);//V
+// //  			}
+// //  		}
+//  
+//  
+//  		u32Offset	 = 0;
+//  		for (j = 0; j < (s32Height >> 1); j++)
+//  		{
+//  			for (i = 0; i< (s32Width >> 1); i ++)
+//  			{
+//  #if BITDEPTH
+//  				if (u8BitDepth != BIT_DEPTH8)
+//  				{
+//  					int32	s32Diff = ((pYUV2[2][(u32Offset << 1) + 1] << 8) | pYUV2[2][(u32Offset << 1)]) - ((pYUV1[2][(u32Offset << 1) + 1] << 8) | pYUV1[2][(u32Offset << 1)]);//V分量
+//  					s32Diff = u8DiffMode ? ABS(s32Diff) : BIN(s32Diff);
+//  					pOrigYUV[2][(u32Offset << 1)] = s32Diff;
+//  					pOrigYUV[2][(u32Offset << 1) + 1] = s32Diff >> 8;
+//  
+//  					bSameFlag &= (!s32Diff);
+//  					u32Offset++;
+//  				}
+//  				else
+//  				{
+//  					int32	s32Diff = pYUV2[2][u32Offset] - pYUV1[2][u32Offset];
+//  					pOrigYUV[2][u32Offset] = u8DiffMode ? ABS(s32Diff) : BIN(s32Diff);//V 分量
+//  					bSameFlag &= (!s32Diff);
+//  					u32Offset++;
+//  				}
+//  #else
+//  
+//  				int32	s32Diff	 = pYUV2[2][u32Offset] - pYUV1[2][u32Offset];
+//  
+//  				pOrigYUV[2][u32Offset]	 = u8DiffMode ? ABS(s32Diff) : BIN(s32Diff); //V分量
+//  				bSameFlag	&= (!s32Diff);
+//  				u32Offset++;
+//  #endif
+//  			}
+//  		}
+//  	case YUV400:
+//  		u32Offset	 = 0;
+//  		for (j = 0; j < s32Height; j++)
+//  		{
+//  			for (i = 0; i< s32Width; i ++)
+//  			{
+//  #if BITDEPTH
+//  				if (u8BitDepth != BIT_DEPTH8)
+//  				{
+//  					int32	s32Diff = abs(((pYUV2[0][(u32Offset << 1) + 1] << 8) | pYUV2[0][(u32Offset << 1)]) - ((pYUV1[0][(u32Offset << 1) + 1] << 8) | pYUV1[0][(u32Offset << 1)]));
+//  					s32Diff = u8DiffMode ? ABS(s32Diff) : BIN(s32Diff);
+//  					pOrigYUV[0][(u32Offset << 1)] = s32Diff;
+//  					pOrigYUV[0][(u32Offset << 1) + 1] = s32Diff >> 8;
+//  
+//  					bSameFlag &= (!s32Diff);
+//  					u32Offset++;
+//  				}
+//  				else
+//  				{
+//  					int32	s32Diff = pYUV2[0][u32Offset] - pYUV1[0][u32Offset];
+//  					pOrigYUV[0][u32Offset] = u8DiffMode ? ABS(s32Diff) : BIN(s32Diff);//Y 分量
+//  					bSameFlag &= (!s32Diff);
+//  					u32Offset++;
+//  				}
+//  #else
+//  
+//  				int32	s32Diff	 = pYUV2[0][u32Offset] - pYUV1[0][u32Offset];
+//  
+//  				pOrigYUV[0][u32Offset]	 = u8DiffMode ? ABS(s32Diff) : BIN(s32Diff); // Y分量
+//  				bSameFlag	&= (!s32Diff);
+//  				u32Offset ++;
+//  #endif
+//  			}
+//  		}
+//  		
+//  		break;
+//  #if ADDFORMAT
+//  	case RGB8:
+//  	case GBR8:
+//  	case YUV444:
+//  		u32Offset = 0;
+//  		for (j = 0; j < s32Height; j++)
+//  		{
+//  			for (i = 0; i < s32Width; i++)
+//  			{
+//  #if BITDEPTH
+//  				int32	s32Diff = abs(((pYUV2[1][(u32Offset << 1) + 1] << 8) | pYUV2[1][(u32Offset << 1)]) - ((pYUV1[1][(u32Offset << 1) + 1] << 8) | pYUV1[1][(u32Offset << 1)]));
+//  				s32Diff = u8DiffMode ? ABS(s32Diff) : BIN(s32Diff);
+//  				pOrigYUV[1][(u32Offset << 1)] = s32Diff;
+//  				pOrigYUV[1][(u32Offset << 1) + 1] = s32Diff >> 8;
+//  
+//  				bSameFlag &= (!s32Diff);
+//  				u32Offset++;
+//  #else
+//  				int32	s32Diff = pYUV2[1][u32Offset] - pYUV1[1][u32Offset];
+//  
+//  				pOrigYUV[1][u32Offset] = u8DiffMode ? ABS(s32Diff) : BIN(s32Diff);//U 分量
+//  				bSameFlag &= (!s32Diff);
+//  				u32Offset++;
+//  #endif
+//  			}
+//  		}
+//  		u32Offset = 0;
+//  		for (j = 0; j < s32Height; j++)
+//  		{
+//  			for (i = 0; i < s32Width; i++)
+//  			{
+//  #if BITDEPTH
+//  				int32	s32Diff = abs(((pYUV2[2][(u32Offset << 1) + 1] << 8) | pYUV2[2][(u32Offset << 1)]) - ((pYUV1[2][(u32Offset << 1) + 1] << 8) | pYUV1[2][(u32Offset << 1)]));
+//  				s32Diff = u8DiffMode ? ABS(s32Diff) : BIN(s32Diff);
+//  				pOrigYUV[2][(u32Offset << 1)] = s32Diff;
+//  				pOrigYUV[2][(u32Offset << 1) + 1] = s32Diff >> 8;
+//  
+//  				bSameFlag &= (!s32Diff);
+//  				u32Offset++;
+//  #else
+//  				int32	s32Diff = pYUV2[2][u32Offset] - pYUV1[2][u32Offset];
+//  
+//  				pOrigYUV[2][u32Offset] = u8DiffMode ? ABS(s32Diff) : BIN(s32Diff); //V分量
+//  				bSameFlag &= (!s32Diff);
+//  				u32Offset++;
+//  #endif
+//  			}
+//  		}
+//  		u32Offset = 0;
+//  		for (j = 0; j < s32Height; j++)
+//  		{
+//  			for (i = 0; i < s32Width; i++)
+//  			{
+//  #if BITDEPTH
+//  				int32	s32Diff = abs(((pYUV2[0][(u32Offset << 1) + 1] << 8) | pYUV2[0][(u32Offset << 1)]) - ((pYUV1[0][(u32Offset << 1) + 1] << 8) | pYUV1[0][(u32Offset << 1)]));
+//  				s32Diff = u8DiffMode ? ABS(s32Diff) : BIN(s32Diff);
+//  				pOrigYUV[0][(u32Offset << 1)] = s32Diff;
+//  				pOrigYUV[0][(u32Offset << 1) + 1] = s32Diff >> 8;
+//  
+//  				bSameFlag &= (!s32Diff);
+//  				u32Offset++;
+//  #else
+//  				int32	s32Diff = pYUV2[0][u32Offset] - pYUV1[0][u32Offset];
+//  
+//  				pOrigYUV[0][u32Offset] = u8DiffMode ? ABS(s32Diff) : BIN(s32Diff); // Y分量
+//  				bSameFlag &= (!s32Diff);
+//  				u32Offset++;
+//  #endif
+//  			}
+//  		}
+//  		break;
+//  #endif
+//  	default:
+//  		break;
+//  	}
 
 	color_space_convert(u8ImageMode);
 }
@@ -352,7 +567,7 @@ LRESULT CDiffPicDlg::show_one_frame(WPARAM wParam, LPARAM lParam)
 	return NULL;
 }
 
-void CDiffPicDlg::OnMouseMove(UINT nFlags, CPoint point) 
+void CDiffPicDlg::OnMouseMove(UINT nFlags, CPoint point) //mouse move updata
 {
 	// TODO: Add your message handler code here and/or call default
 	CYUVPlayerDlg	*pMainDlg	 = (CYUVPlayerDlg *)this->pMainDlg;
@@ -367,13 +582,27 @@ void CDiffPicDlg::OnMouseMove(UINT nFlags, CPoint point)
 		s32SrcY		= point.y * s32Height / s32ZoomHeight;
 		s32MBXIdx	= s32SrcX >> 4;
 		s32MBYIdx	= s32SrcY >> 4;
+#if LCU
+		s32SrcX = point.x * s32Width / s32ZoomWidth;
+		s32SrcY = point.y * s32Height / s32ZoomHeight;
+		s32MBXIdx_Lcu = s32SrcX >> 6;
+		s32MBYIdx_Lcu = s32SrcY >> 6;
+#endif
 		//++ 标记鼠标所指的宏块
 		mark_macroblock();
 		pMainDlg->pImage[0]->s32MBXIdx		= s32MBXIdx;
 		pMainDlg->pImage[0]->s32MBYIdx		= s32MBYIdx;
+#if LCU
+		pMainDlg->pImage[0]->s32MBXIdx_Lcu = s32MBXIdx_Lcu;
+		pMainDlg->pImage[0]->s32MBYIdx_Lcu = s32MBYIdx_Lcu;
+#endif
 		pMainDlg->pImage[0]->mark_macroblock();
 		pMainDlg->pImage[1]->s32MBXIdx		= s32MBXIdx;
 		pMainDlg->pImage[1]->s32MBYIdx		= s32MBYIdx;
+#if LCU
+		pMainDlg->pImage[1]->s32MBXIdx_Lcu = s32MBXIdx_Lcu;
+		pMainDlg->pImage[1]->s32MBYIdx_Lcu = s32MBYIdx_Lcu;
+#endif
 		pMainDlg->pImage[1]->mark_macroblock();
 	}
 	
@@ -392,7 +621,15 @@ void CDiffPicDlg::OnLButtonDown(UINT nFlags, CPoint point)
 	pMainDlg->pImage[0]->s32ViewMBy		= s32CurrMBy;
 	pMainDlg->pImage[1]->s32ViewMBx		= s32CurrMBx;
 	pMainDlg->pImage[1]->s32ViewMBy		= s32CurrMBy;
-	
+#if LCU
+	s32ViewMBx_Lcu = s32CurrMBx_Lcu;
+	s32ViewMBy_Lcu = s32CurrMBy_Lcu;
+	pMainDlg->pImage[0]->s32ViewMBx_Lcu = s32CurrMBx_Lcu;
+	pMainDlg->pImage[0]->s32ViewMBy_Lcu = s32CurrMBy_Lcu;
+	pMainDlg->pImage[1]->s32ViewMBx_Lcu = s32CurrMBx_Lcu;
+	pMainDlg->pImage[1]->s32ViewMBy_Lcu = s32CurrMBy_Lcu;
+#endif
+
 	if (pMainDlg->get_play_status() != PLAY_STATUS)
 	{
 		button_down_left();
@@ -434,7 +671,16 @@ void CDiffPicDlg::OnRButtonDown(UINT nFlags, CPoint point)
 	pMainDlg->pImage[0]->s32MBYIdx		= s32MBYIdx;
 	pMainDlg->pImage[1]->s32MBXIdx		= s32MBXIdx;
 	pMainDlg->pImage[1]->s32MBYIdx		= s32MBYIdx;
-
+#if LCU
+	s32SrcX = point.x * s32Width / s32ZoomWidth;
+	s32SrcY = point.y * s32Height / s32ZoomHeight;
+	s32MBXIdx_Lcu = s32SrcX >> 6;
+	s32MBYIdx_Lcu = s32SrcY >> 6;
+	pMainDlg->pImage[0]->s32MBXIdx_Lcu = s32MBXIdx_Lcu;
+	pMainDlg->pImage[0]->s32MBYIdx_Lcu = s32MBYIdx_Lcu;
+	pMainDlg->pImage[1]->s32MBXIdx_Lcu = s32MBXIdx_Lcu;
+	pMainDlg->pImage[1]->s32MBYIdx_Lcu = s32MBYIdx_Lcu;
+#endif
 	if (pMainDlg->get_play_status() != PLAY_STATUS)
 	{
 		button_down_right();

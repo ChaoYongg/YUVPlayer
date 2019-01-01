@@ -14,6 +14,7 @@
 #include "ImageDlg.h"
 #include "CustomSizeDlg.h"
 #include "JumpFrameDlg.h"
+#include "afxwin.h"
 
 /////////////////////////////////////////////////////////////////////////////
 // CYUVPlayerDlg dialog
@@ -38,6 +39,10 @@ public:
 	uint8	u8EOFNum;			//++ 达到文件尾的图像个数
 	uint8	u8EOHNum;			//++ 达到文件头的图像个数
     uint8   u8SampleFormat;
+
+	uint8   u8Sample_x;			//++图像水平方向采样格式
+	uint8   u8Sample_y;			//++图像垂直方向采样格式
+
     int32	s32Width;			//++ 图像原始宽度
     int32	s32Height;			//++ 图像原始高度
     int32	s32ZoomWidth;		//++ 缩放后的宽度
@@ -46,6 +51,9 @@ public:
 	int32	s32MBInfoDlgX;
 	int32	s32MBInfoDlgY;
 	float	fFrameRate;
+#if BITDEPTH //add
+	float   fBitDepth;
+#endif
     CRect   cLayout;
 	CString		m_sHeight;
 	CString		m_sWidth;
@@ -55,23 +63,23 @@ public:
 	CJumpFrameDlg*	pJumpFrameDlg;
 	CImageDlg*		pImage[MAX_IMAGE_NUM];
 	CWinThread*		m_pPlayThread;
-	
 	void	initial();
 	void	set_comp_mode();
 	void	set_view_mode();
 	void	hide_MBinfo_dlg();
     void	layout_windows();
 	void	close_image(int8 s8DlgIdx);
-	LRESULT	show_one_frame(uint8 bReNotice);
+	LRESULT	show_one_frame(uint8 bReNotice, bool bImageMode = true);
 	void	set_play_status(uint8 u8Status);
 	void	adjust_window_position(CChildDlg *pCurrDlg);
     LRESULT    translate_message(WPARAM wParam, LPARAM lParam);
 	uint8	get_play_status();
-
+	uint8   get_ImageMode();
 // Dialog Data
 	//{{AFX_DATA(CYUVPlayerDlg)
 	enum { IDD = IDD_YUVPLAYER_DIALOG };
 	CEdit	m_frameRate;
+	CEdit m_bitDepth;
 	CComboBox	m_zoomSize;
 	CComboBox	m_sampleFormat;
 	CComboBox	m_frameSize;
@@ -91,7 +99,12 @@ public:
 	CString	m_sSampleFormat;
 	CString	m_sZoomSize;
 	CString	m_sFrameRate;
+	CString m_sbitDepth;
 	CString	m_sStartFrameNr;
+#if BITDEPTH
+//	CComboBox   m_bitDepth;
+//	CString m_sBitDepth;
+#endif
 	//}}AFX_DATA
 
 	// ClassWizard generated virtual function overrides
@@ -129,6 +142,9 @@ protected:
 	afx_msg void OnExit();
 	afx_msg void OnClose();
 	afx_msg void OnChangeFrameRate();
+#if BITDEPTH
+	afx_msg void OnChangeBitdepth();
+#endif
 	afx_msg void OnDropFiles(HDROP hDropInfo);
 	afx_msg void OnMove(int x, int y);
 	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
@@ -155,9 +171,27 @@ private:
 	void	change_frame_rate();
 	int32	get_sample_ratio();
 	int32	get_zoom_ratio();
+#if BITDEPTH//add
+	int32   get_bit_depth();
+	void    change_bit_depth();
+#endif
 	int32	get_frame_size();
 	int32	get_input_parameter();
 	int32	creat_image_window(CString CurrFilePath);
+public:
+	afx_msg void OnBnClickedSave();
+	bool saveBitmap(BYTE* pBuffer, long lBufferLen);
+	CButton m_savePic;
+	void saveBitmap();
+
+//	CString m_sbitDepth;
+//	CString m_sbitDepth;
+//	CString m_sbitDepth;
+//	afx_msg void OnCbnSelchangeBitDepth();
+//	afx_msg void OnCbnSelchangeSampleFormat();
+
+//	CString m_sbitDepth;
+//	CString m_sBitDepth;
 };
 
 //{{AFX_INSERT_LOCATION}}

@@ -52,10 +52,10 @@ void CMBInfoDlg::initial()
 	s32MarkGridY		 = 0;
 	u8ShowMark			 = FALSE;
 	u8ValueMode			 = OCT_MODE;
-	s32GridWidth		 = 24;
-	s32GridHeight		 = 13;
-	s32PixTableX		 = 3;
-	s32PixTableY		 = 90;
+	s32GridWidth = 30;//24;
+	s32GridHeight = 13;//13;
+	s32PixTableX         =  3;
+	s32PixTableY		 = 100;
 	m_sMBInfo			 = _T("");
 	oldRect.SetRect(-100, -100, -100, -100);
 	//++ 创建像素表格使用的字体
@@ -580,6 +580,12 @@ void CMBInfoDlg::OnClose()
 	pCurrWnd->s32ViewBlkY		= -100;
 	pCurrWnd->s32PrevBlkX		= -100;
 	pCurrWnd->s32PrevBlkY		= -100;
+#if LCU
+	pCurrWnd->s32ViewBlkX_Lcu = -100;
+	pCurrWnd->s32ViewBlkY_Lcu = -100;
+	pCurrWnd->s32PrevBlkX_Lcu = -100;
+	pCurrWnd->s32PrevBlkY_Lcu = -100;
+#endif
 	pCurrWnd->Invalidate();
 	pCurrWnd->UpdateWindow();
 }

@@ -14,10 +14,37 @@ public:
     int8	s8DlgIdx;
 	uint8	bSizeChanged;	//++ 窗口大小是否改变
     uint8   u8SampleFormat;
+	uint8   u8Sample_x;		//++图像水平方向采样格式
+	uint8   u8Sample_y;		//++图像垂直方向采样格式
+#if BITDEPTH//add
+	uint8   u8BitDepth;
+#endif
     int32	s32MBXNum;		//++ 一行宏块个数
     int32	s32MBYNum;		//++ 一列宏块个数
     int32	s32MBXIdx;		//++ 当前宏块所在列号（缩放前）
     int32	s32MBYIdx;		//++ 当前宏块所在行号（缩放前）
+#if LCU
+	int32	s32MBXIdx_Lcu;		//++ 当前宏块所在列号（缩放前）
+	int32	s32MBYIdx_Lcu;		//++ 当前宏块所在行号（缩放前）
+	int32	s32CurrMBx_Lcu;		//++ 鼠标经过的宏块的顶点坐标（缩放前）
+	int32	s32CurrMBy_Lcu;		//++ 鼠标经过的宏块的顶点坐标（缩放前）
+	int32	s32CurrBlkX_Lcu;	//++ 鼠标经过的宏块的顶点坐标（缩放后）
+	int32	s32CurrBlkY_Lcu;	//++ 鼠标经过的宏块的顶点坐标（缩放后）
+	int32	s32CurrBlkW_Lcu;
+	int32	s32CurrBlkH_Lcu;
+
+	int32	s32PrevBlkX_Lcu;		//++ 前一个鼠标指向的宏块的顶点坐标（缩放后）
+	int32	s32PrevBlkY_Lcu;		//++ 前一个鼠标指向的宏块的顶点坐标（缩放后）
+	int32	s32PrevBlkW_Lcu;
+	int32	s32PrevBlkH_Lcu;
+
+	int32	s32ViewMBx_Lcu;		//++ 显示像素值的宏块的顶点坐标（缩放前）
+	int32	s32ViewMBy_Lcu;		//++ 显示像素值的宏块的顶点坐标（缩放前）
+	int32	s32ViewBlkX_Lcu;	//++ 显示像素值的宏块的顶点坐标（缩放后）
+	int32	s32ViewBlkY_Lcu;	//++ 显示像素值的宏块的顶点坐标（缩放后）
+	int32	s32ViewBlkW_Lcu;
+	int32	s32ViewBlkH_Lcu;
+#endif
     int32	s32ViewMBx;		//++ 显示像素值的宏块的顶点坐标（缩放前）
     int32	s32ViewMBy;		//++ 显示像素值的宏块的顶点坐标（缩放前）
     int32	s32ViewBlkX;	//++ 显示像素值的宏块的顶点坐标（缩放后）
@@ -72,7 +99,7 @@ public:
     void	show_macroblock_info();
     void	view_macroblock();
     void	color_space_convert(uint8 u8ImageMode);
-	void	YV12_to_RGB24(uint8* pu8Y, uint8* pu8U, uint8* pu8V);
+	void	YV12_to_RGB24(uint8* pu8Y, uint8* pu8U, uint8* pu8V, uint8 u8ImageMode=0);
 	void	YUY2_to_RGB24(uint8 *pu8RGBData, uint8 *pu8YUVData);
     void	set_image_mode(uint8 u8ImageMode);
     void	draw_dash_frame(CRect &rect);
@@ -81,6 +108,8 @@ public:
 	void	update_image();
     int32	malloc_memory();
     int32	show_image(CDC *pDC);
+	DECLARE_MESSAGE_MAP()
+	LPBYTE getRGBBuff();
 };
 
 

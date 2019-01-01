@@ -23,7 +23,7 @@ public:
 	uint8	u8LumaPointNumY;		//++ 亮度垂直方向需要显示的点数
 	uint8	u8ChroPointNumX;		//++ 色度水平方向需要显示的点数
 	uint8	u8ChroPointNumY;		//++ 色度垂直方向需要显示的点数
-	uint8	pixelValue[26][17];		//++ 宏块像素值
+	int32	pixelValue[26][17];		//++ 宏块像素值
 	int32	s32GridWidth;			//++ 单元格宽度
 	int32	s32GridHeight;			//++ 单元格高度
 	int32	s32PixTableX;			//++ 表格顶点坐标

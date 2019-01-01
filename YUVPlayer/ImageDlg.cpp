@@ -88,9 +88,12 @@ int32 CImageDlg::create_window(CWnd *pMainDlg)
 #ifdef LOGINFO
 	CLog("创建图像窗口>>创建宏块信息窗口");
 #endif
-	//++ 创建宏块信息窗口
+	//++ 创建宏块信息窗口 
 	MBInfoDlg.create_window((CWnd *)this);
-	MBInfoDlg.MoveWindow((s8DlgIdx % 3) * 425, (s8DlgIdx / 3) * 16, 425, 470, FALSE);
+#if LCU
+	MBInfoDlg.MoveWindow((s8DlgIdx % 3) * 425, (s8DlgIdx / 3) * 16, 530/*430*/, 490, FALSE);//改变窗口大小
+#endif
+//	MBInfoDlg.MoveWindow((s8DlgIdx % 3) * 425, (s8DlgIdx / 3) * 16, 425, 470, FALSE);
 
 #ifdef LOGINFO
 	CLog("创建图像窗口>>创建跳转帧号窗口");
@@ -115,21 +118,47 @@ int32 CImageDlg::initial()
         u32ChroPicSize	 = (s32Width >> 1) * (s32Height >> 1);  //++ 按 4:2:0 计算色度空间
         u32FrameSize	 = u32LumaPicSize;
         s32FrameNum		 = pFile->GetLength() / u32FrameSize;
-        
         break;
         
     case YUV420:
         u32ChroPicSize	 = (s32Width >> 1) * (s32Height >> 1);
         u32FrameSize	 = u32LumaPicSize + (u32ChroPicSize << 1);
-        s32FrameNum		 = pFile->GetLength() / u32FrameSize;
-        
+        s32FrameNum		 = pFile->GetLength() / u32FrameSize;        
         break;
-        
+
+	case YUV422:
+		u32ChroPicSize	 = (s32Width >> 1) * s32Height;
+		u32FrameSize	 = u32LumaPicSize + (u32ChroPicSize << 1);
+		s32FrameNum		 = pFile->GetLength() / u32FrameSize;
+		break;
+
+#if  ADDFORMAT
+	case RGB8:
+	case GBR8:
+	case YUV444:
+		u32ChroPicSize = s32Width * s32Height;
+		u32FrameSize = u32LumaPicSize + (u32ChroPicSize << 1);
+		s32FrameNum = pFile->GetLength() / u32FrameSize;
+		break;
+	case NV12:
+	case NV21:
+		u32ChroPicSize = (s32Width >> 1) * (s32Height >> 1);
+		u32FrameSize = u32LumaPicSize + (u32ChroPicSize << 1);
+		s32FrameNum = pFile->GetLength() / u32FrameSize;
+		break;
+#endif
     default:
-        
         break;
     }
-
+#if BITDEPTH//add
+	if (u8BitDepth != BIT_DEPTH8)
+	{
+		u32LumaPicSize = s32Height * (s32Width<<1);//<< 1;
+		u32ChroPicSize = u32ChroPicSize * 2;//;(s32Width >> 1)*(s32Height >> 1) << 1;
+		u32FrameSize = u32LumaPicSize + u32ChroPicSize * 2;//;(u32ChroPicSize<<1);
+		s32FrameNum = pFile->GetLength() / u32FrameSize;
+	}
+#endif
 	if (s32FrameNum == 0)
 	{
 		AfxMessageBox(fileName + " 不够一帧数据！", MB_ICONERROR);
@@ -203,6 +232,9 @@ void CImageDlg::OnPaint()
     show_image(&dc);
 	//++ 防止窗口被遮挡后，窗口上标记的内容丢失
 	remark_macroblock(&dc);
+#if LCU
+	//去掉黄色框在这里 不然黄色框一直出现
+#endif
 	// Do not call CFrameWnd::OnPaint() for painting messages
 }
 
@@ -216,7 +248,6 @@ void CImageDlg::rotate_image(LPBYTE pSrcY, LPBYTE pSrcU, LPBYTE pSrcV)
 	uint8*	pu8DstU;
 	uint8*	pu8DstV;
 
-
 	if (s16RotateAngle == 0)
 	{
 		pOrigYUV[0]	= pSrcY;
@@ -225,6 +256,8 @@ void CImageDlg::rotate_image(LPBYTE pSrcY, LPBYTE pSrcU, LPBYTE pSrcV)
 		
 		return;
 	}
+
+	return;//裁剪掉旋转功能
 	
 	if (s16RotateAngle == 90)
 	{
@@ -264,6 +297,43 @@ void CImageDlg::rotate_image(LPBYTE pSrcY, LPBYTE pSrcU, LPBYTE pSrcV)
 			}
 			
 			break;
+#if ADDFORMAT
+		case RGB8:
+		case GBR8:
+		case YUV444:
+			pu8SrcU = pSrcU + (s32SrcWidth );
+			pu8SrcV = pSrcV + (s32SrcWidth );
+			for (j = 0; j < (s32SrcHeight ); j++)
+			{
+				pu8DstU = pRotaYUV[1] + u32ChroPicSize - j;
+				pu8DstV = pRotaYUV[2] + u32ChroPicSize - j;
+				for (i = 0; i < (s32SrcWidth ); i++)
+				{
+					pu8DstU[0] = pu8SrcU[-i];
+					pu8DstV[0] = pu8SrcV[-i];
+					pu8DstU -= (s32SrcHeight );
+					pu8DstV -= (s32SrcHeight );
+				}
+
+				pu8SrcU += (s32SrcWidth );
+				pu8SrcV += (s32SrcWidth );
+			}
+			pu8SrcY = pSrcY + s32SrcWidth - 1;
+			for (j = 0; j < s32SrcHeight; j++)
+			{
+				pu8DstY = pRotaYUV[0] + u32LumaPicSize - j - 1;
+
+				for (i = 0; i < s32SrcWidth; i++)
+				{
+					pu8DstY[0] = pu8SrcY[-i];
+					pu8DstY -= s32SrcHeight;
+				}
+
+				pu8SrcY += s32SrcWidth;
+			}
+
+			break;
+#endif
 		default:
 			break;
 		}
@@ -304,6 +374,41 @@ void CImageDlg::rotate_image(LPBYTE pSrcY, LPBYTE pSrcU, LPBYTE pSrcV)
 				pu8DstY	-= s32SrcWidth;
 			}
 			break;
+#if ADDFORMAT
+		case RGB8:
+		case GBR8:
+		case YUV444:
+			pu8SrcU = pSrcU;
+			pu8SrcV = pSrcV;
+			pu8DstU = pRotaYUV[1] + u32ChroPicSize - 1;
+			pu8DstV = pRotaYUV[2] + u32ChroPicSize - 1;
+			for (j = 0; j < (s32SrcHeight ); j++)
+			{
+				for (i = 0; i < (s32SrcWidth ); i++)
+				{
+					pu8DstU[-i] = pu8SrcU[i];
+					pu8DstV[-i] = pu8SrcV[i];
+				}
+
+				pu8SrcU += (s32SrcWidth );
+				pu8SrcV += (s32SrcWidth );
+				pu8DstU -= (s32SrcWidth );
+				pu8DstV -= (s32SrcWidth );
+			}
+			pu8SrcY = pSrcY;
+			pu8DstY = pRotaYUV[0] + u32LumaPicSize - 1;
+			for (j = 0; j < s32SrcHeight; j++)
+			{
+				for (i = 0; i < s32SrcWidth; i++)
+				{
+					pu8DstY[-i] = pu8SrcY[i];
+				}
+
+				pu8SrcY += s32SrcWidth;
+				pu8DstY -= s32SrcWidth;
+			}
+			break;
+#endif
 		default:
 			break;
 		}
@@ -346,6 +451,43 @@ void CImageDlg::rotate_image(LPBYTE pSrcY, LPBYTE pSrcU, LPBYTE pSrcV)
 			}
 			
 			break;
+#if ADDFORMAT
+		case RGB8:
+		case GBR8:
+		case YUV444:
+			pu8SrcU = pSrcU;
+			pu8SrcV = pSrcV;
+			for (j = 0; j < (s32SrcHeight ); j++)
+			{
+				pu8DstU = pRotaYUV[1] + u32ChroPicSize - (s32SrcHeight ) + j;
+				pu8DstV = pRotaYUV[2] + u32ChroPicSize - (s32SrcHeight ) + j;
+				for (i = 0; i < (s32SrcWidth ); i++)
+				{
+					pu8DstU[0] = pu8SrcU[i];
+					pu8DstV[0] = pu8SrcV[i];
+					pu8DstU -= (s32SrcHeight );
+					pu8DstV -= (s32SrcHeight );
+				}
+
+				pu8SrcU += (s32SrcWidth );
+				pu8SrcV += (s32SrcWidth );
+			}
+			pu8SrcY = pSrcY;
+			for (j = 0; j < s32SrcHeight; j++)
+			{
+				pu8DstY = pRotaYUV[0] + u32LumaPicSize - s32SrcHeight + j;
+
+				for (i = 0; i < s32SrcWidth; i++)
+				{
+					pu8DstY[0] = pu8SrcY[i];
+					pu8DstY -= s32SrcHeight;
+				}
+
+				pu8SrcY += s32SrcWidth;
+			}
+
+			break;
+#endif
 		default:
 			break;
 		}
@@ -366,7 +508,6 @@ void CImageDlg::mirror_image(LPBYTE pSrcY, LPBYTE pSrcU, LPBYTE pSrcV)
 	uint8*	pu8DstU;
 	uint8*	pu8DstV;
 
-
 	if (u8MirrorMode == MIRROR_NONE)
 	{
 		pOrigYUV[0]	= pSrcY;
@@ -375,6 +516,8 @@ void CImageDlg::mirror_image(LPBYTE pSrcY, LPBYTE pSrcU, LPBYTE pSrcV)
 
 		return;
 	}
+
+	return; //裁剪掉镜像功能
 
 	if (u8MirrorMode == MIRROR_BOTH)
 	{
@@ -393,6 +536,21 @@ void CImageDlg::mirror_image(LPBYTE pSrcY, LPBYTE pSrcU, LPBYTE pSrcV)
 			}
 
 			break;
+#if ADDFORMAT
+		case RGB8:
+		case GBR8:
+		case YUV444:
+			for (i = 0; i < u32ChroPicSize; i++)
+			{
+				pMirrYUV[1][i] = pSrcU[u32ChroPicSize - 1 - i];
+				pMirrYUV[2][i] = pSrcV[u32ChroPicSize - 1 - i];
+			}
+			for (i = 0; i < u32LumaPicSize; i++)
+			{
+				pMirrYUV[0][i] = pSrcY[u32LumaPicSize - 1 - i];
+			}
+			break;
+#endif
 		default:
 			break;
 		}
@@ -410,14 +568,47 @@ void CImageDlg::mirror_image(LPBYTE pSrcY, LPBYTE pSrcU, LPBYTE pSrcV)
 			{
 				for (i = 0; i < (s32Width >> 1); i ++)
 				{
-					pu8DstU[i]	 = pu8SrcU[(s32Width >> 1) - 1 - i];
-					pu8DstV[i]	 = pu8SrcV[(s32Width >> 1) - 1 - i];
+#if BITDEPTH
+					if(u8BitDepth != BIT_DEPTH8)
+					{
+						pu8DstU[(i << 1) + 1] = pu8SrcU[s32Width - 1 - (i<<1)];
+						pu8DstU[(i << 1)] = pu8SrcU[s32Width - 1 - (i << 1) - 1];
+
+						pu8DstV[(i << 1) + 1] = pu8SrcV[s32Width - 1 - (i<<1)];
+						pu8DstV[(i << 1)] = pu8SrcV[s32Width - 1 - (i << 1) - 1];
+					}
+					else
+					{
+						pu8DstU[i] = pu8SrcU[(s32Width >> 1) - 1 - i];
+						pu8DstV[i] = pu8SrcV[(s32Width >> 1) - 1 - i];
+					}
+#else
+					pu8DstU[i] = pu8SrcU[(s32Width >> 1) - 1 - i];
+					pu8DstV[i] = pu8SrcV[(s32Width >> 1) - 1 - i];
+#endif
 				}
 				
-				pu8SrcU	+= (s32Width >> 1);
-				pu8DstU	+= (s32Width >> 1);
-				pu8SrcV	+= (s32Width >> 1);
-				pu8DstV	+= (s32Width >> 1);
+#if BITDEPTH
+				if(u8BitDepth != BIT_DEPTH8)
+				{
+					pu8SrcU	+= s32Width;
+					pu8DstU	+= s32Width;
+					pu8SrcV	+= s32Width;
+					pu8DstV += s32Width;
+				}
+				else
+				{
+					pu8SrcU += (s32Width >> 1);
+					pu8DstU += (s32Width >> 1);
+					pu8SrcV += (s32Width >> 1);
+					pu8DstV += (s32Width >> 1);
+				}
+#else
+				pu8SrcU += (s32Width >> 1);
+				pu8DstU += (s32Width >> 1);
+				pu8SrcV += (s32Width >> 1);
+				pu8DstV += (s32Width >> 1);
+#endif
 			}
 		case YUV400:
 			pu8SrcY	= pSrcY;		
@@ -426,14 +617,74 @@ void CImageDlg::mirror_image(LPBYTE pSrcY, LPBYTE pSrcU, LPBYTE pSrcV)
 			{
 				for (i = 0; i < s32Width; i ++)
 				{
-					pu8DstY[i]	 = pu8SrcY[s32Width - 1 - i];
+#if BITDEPTH
+					if (u8BitDepth != BIT_DEPTH8)
+					{
+						pu8DstY[(i*2) + 1] = pu8SrcY[(s32Width*2) - 1 - (i<<1)];
+						pu8DstY[(i*2) ] = pu8SrcY[(s32Width*2) - 1 - (i<<1) - 1 ];
+					}
+					else
+					{
+						pu8DstY[i] = pu8SrcY[s32Width - 1 - i];
+					}
+#else
+					pu8DstY[i] = pu8SrcY[s32Width - 1 - i];
+#endif
+				}	
+#if BITDEPTH
+				if (u8BitDepth != BIT_DEPTH8)
+				{
+					pu8DstY	+= (s32Width*2);
+					pu8SrcY	+= (s32Width*2);	
 				}
-				
-				pu8DstY	+= s32Width;
-				pu8SrcY	+= s32Width;		
+				else
+				{
+					pu8DstY += s32Width;
+					pu8SrcY += s32Width;
+				}			
+#else
+				pu8DstY += s32Width;
+				pu8SrcY += s32Width;
+#endif					
 			}
 			
 			break;
+#if ADDFORMAT
+		case RGB8:
+		case GBR8:
+		case YUV444:
+			pu8SrcU = pSrcU;
+			pu8SrcV = pSrcV;
+			pu8DstU = pMirrYUV[1];
+			pu8DstV = pMirrYUV[2];
+			for (j = 0; j < (s32Height ); j++)
+			{
+				for (i = 0; i < (s32Width ); i++)
+				{
+					pu8DstU[i] = pu8SrcU[(s32Width ) - 1 - i];
+					pu8DstV[i] = pu8SrcV[(s32Width ) - 1 - i];
+				}
+
+				pu8SrcU += (s32Width );
+				pu8DstU += (s32Width );
+				pu8SrcV += (s32Width );
+				pu8DstV += (s32Width );
+			}
+			pu8SrcY = pSrcY;
+			pu8DstY = pMirrYUV[0];
+			for (j = 0; j < s32Height; j++)
+			{
+				for (i = 0; i < s32Width; i++)
+				{
+					pu8DstY[i] = pu8SrcY[s32Width - 1 - i];
+				}
+
+				pu8DstY += s32Width;
+				pu8SrcY += s32Width;
+			}
+
+			break;
+#endif
 		default:
 			break;
 		}
@@ -477,6 +728,44 @@ void CImageDlg::mirror_image(LPBYTE pSrcY, LPBYTE pSrcU, LPBYTE pSrcV)
 			}
 			
 			break;
+#if ADDFORMAT
+		case RGB8:
+		case GBR8:
+		case YUV444:
+			pu8SrcU = pSrcU;
+			pu8SrcV = pSrcV;
+			pu8DstU = pMirrYUV[1] + u32ChroPicSize;
+			pu8DstV = pMirrYUV[2] + u32ChroPicSize;
+			for (j = 0; j < (s32Height ); j++)
+			{
+				pu8DstU -= (s32Width );
+				pu8DstV -= (s32Width );
+
+				for (i = 0; i < (s32Width ); i++)
+				{
+					memcpy(pu8DstU, pu8SrcU, (s32Width ));
+					memcpy(pu8DstV, pu8SrcV, (s32Width ));
+				}
+
+				pu8SrcU += (s32Width );
+				pu8SrcV += (s32Width );
+			}
+			pu8SrcY = pSrcY;
+			pu8DstY = pMirrYUV[0] + u32LumaPicSize;
+			for (j = 0; j < s32Height; j++)
+			{
+				pu8DstY -= s32Width;
+
+				for (i = 0; i < s32Width; i++)
+				{
+					memcpy(pu8DstY, pu8SrcY, s32Width);
+				}
+
+				pu8SrcY += s32Width;
+			}
+
+			break;
+#endif
 		default:
 			break;
 		}
@@ -487,42 +776,82 @@ void CImageDlg::mirror_image(LPBYTE pSrcY, LPBYTE pSrcU, LPBYTE pSrcV)
 	pOrigYUV[2]	= pMirrYUV[2];
 }
 
-int32 CImageDlg::read_one_frame(uint8 u8ImageMode)
+int32 CImageDlg::read_one_frame(uint8 u8ImageMode, bool bImageMode)
 {
 	//++ 启用临界区保护
 	CCriticalSection	CriticalSection(pCriticalSection);
-	
 
-	switch (u8SampleFormat)
-	{
-	case YUV400:
-		if (u32LumaPicSize != pFile->Read(pReadYUV[0], u32LumaPicSize))
+	//CYUVPlayerDlg	*pMainDlg = (CYUVPlayerDlg *)this->pMainDlg;
+	if (bImageMode)
+		switch (u8SampleFormat)
 		{
-			return EOF_YUVPlayer;
+			case YUV400:
+				if (u32LumaPicSize != pFile->Read(pReadYUV[0], u32LumaPicSize))
+				{
+					return EOF_YUVPlayer;
+				}
+				break;
+
+			case YUV420:
+				if (u32LumaPicSize != pFile->Read(pReadYUV[0], u32LumaPicSize))
+				{
+					return EOF_YUVPlayer;
+				}
+				if (u32ChroPicSize != pFile->Read(pReadYUV[1], u32ChroPicSize))
+				{
+					return EOF_YUVPlayer;
+				}
+				if (u32ChroPicSize != pFile->Read(pReadYUV[2], u32ChroPicSize))
+				{
+					return EOF_YUVPlayer;
+				}
+				break;
+
+			case YUV422:
+				if (u32LumaPicSize != pFile->Read(pReadYUV[0], u32LumaPicSize))
+				{
+					return EOF_YUVPlayer;
+				}
+				if (u32ChroPicSize != pFile->Read(pReadYUV[1], u32ChroPicSize))
+				{
+					return EOF_YUVPlayer;
+				}
+				if (u32ChroPicSize != pFile->Read(pReadYUV[2], u32ChroPicSize))
+				{
+					return EOF_YUVPlayer;
+				}
+				break;
+
+#if ADDFORMAT
+			case RGB8:
+			case GBR8:
+			case YUV444:
+				if (u32LumaPicSize != pFile->Read(pReadYUV[0], u32LumaPicSize))
+				{
+					return EOF_YUVPlayer;
+				}
+				if (u32ChroPicSize != pFile->Read(pReadYUV[1], u32ChroPicSize))
+				{
+					return EOF_YUVPlayer;
+				}
+				if (u32ChroPicSize != pFile->Read(pReadYUV[2], u32ChroPicSize))
+				{
+					return EOF_YUVPlayer;
+				}
+				break;
+
+#endif
+			case NV12:
+			case NV21:
+				if (u32LumaPicSize * 3 / 2 != pFile->Read(pReadYUV[0], u32LumaPicSize * 3 / 2))
+				{
+					return EOF_YUVPlayer;
+				}
+				break;
+
+			default:
+				break;
 		}
-		
-		break;
-		
-	case YUV420:
-		if (u32LumaPicSize != pFile->Read(pReadYUV[0], u32LumaPicSize))
-		{
-			return EOF_YUVPlayer;
-		}
-		if (u32ChroPicSize != pFile->Read(pReadYUV[1], u32ChroPicSize))
-		{
-			return EOF_YUVPlayer;
-		}
-		if (u32ChroPicSize != pFile->Read(pReadYUV[2], u32ChroPicSize))
-		{
-			return EOF_YUVPlayer;
-		}
-		
-		break;
-		
-	default:
-		
-		break;
-	}
 
 	rotate_image(pReadYUV[0], pReadYUV[1], pReadYUV[2]);
 	mirror_image(pOrigYUV[0], pOrigYUV[1], pOrigYUV[2]);
@@ -536,9 +865,9 @@ LRESULT CImageDlg::show_one_frame(WPARAM wParam, LPARAM lParam)
 {
 	uint8	u8ImageMode		= (uint8)wParam;
     int32   s32Ret;
+	bool   bImageMode = (bool)lParam;
 
-
-	s32Ret  = read_one_frame(u8ImageMode);
+	s32Ret  = read_one_frame(u8ImageMode, bImageMode);
 	InvalidateRect(NULL, FALSE);
 	UpdateWindow();
 
@@ -585,6 +914,13 @@ void CImageDlg::OnMouseMove(UINT nFlags, CPoint point)
 		s32SrcY		= point.y * s32Height / s32ZoomHeight;
 		s32MBXIdx	= s32SrcX >> 4;
 		s32MBYIdx	= s32SrcY >> 4;
+
+#if LCU
+		s32SrcX = point.x * s32Width / s32ZoomWidth;
+		s32SrcY = point.y * s32Height / s32ZoomHeight;
+		s32MBXIdx_Lcu = s32SrcX >> 6;
+		s32MBYIdx_Lcu = s32SrcY >> 6;
+#endif
 		//++ 标记鼠标所指的宏块
 		mark_macroblock();
 	}
@@ -600,6 +936,11 @@ void CImageDlg::OnLButtonDown(UINT nFlags, CPoint point)
 
 	s32ViewMBx	= s32CurrMBx;
 	s32ViewMBy	= s32CurrMBy;
+
+#if LCU
+	s32ViewMBx_Lcu = s32CurrMBx_Lcu;
+	s32ViewMBy_Lcu = s32CurrMBy_Lcu;
+#endif
 
 	if (pMainDlg->get_play_status() != PLAY_STATUS)
 	{
@@ -637,7 +978,12 @@ void CImageDlg::OnRButtonDown(UINT nFlags, CPoint point)
 	s32SrcY		= point.y * s32Height / s32ZoomHeight;
 	s32MBXIdx	= s32SrcX >> 4;
 	s32MBYIdx	= s32SrcY >> 4;
-
+#if LCU
+	s32SrcX = point.x * s32Width / s32ZoomWidth;
+	s32SrcY = point.y * s32Height / s32ZoomHeight;
+	s32MBXIdx_Lcu = s32SrcX >> 6;
+	s32MBYIdx_Lcu = s32SrcY >> 6;
+#endif
 	if (pMainDlg->get_play_status() != PLAY_STATUS)
 	{
 		button_down_right();
@@ -781,6 +1127,7 @@ void CImageDlg::OnMenuitemYUV()
 void CImageDlg::OnMenuitemY() 
 {
 	// TODO: Add your command handler code here
+	//color_space_convert(IMAGE_Y);
 	set_image_mode(IMAGE_Y);
 }
 
@@ -1154,4 +1501,43 @@ BOOL CImageDlg::PreTranslateMessage(MSG* pMsg)
     }
 
     return CDialog::PreTranslateMessage(pMsg);
+}
+
+
+bool CImageDlg::saveBitmap(TCHAR* tfileName, long lBufferLen, int bmpIdx)
+{
+	CString	sTitle;
+	sTitle.Format("%d_%d_%s_%d", s32CurrFrameNr, s32FrameNum, fileName,bmpIdx);
+	CString cFileName = tfileName;
+	cFileName = cFileName + "\\"+ sTitle;
+	int potPos = cFileName.ReverseFind('.');
+	//cFileName = cFileName.Left(potPos - 1) +".bmp";
+	cFileName.Format("%s_%d%s", cFileName.Left(potPos), bmpIdx, ".bmp");
+	BYTE* pBuffer = pRGBBuff;
+
+	HANDLE hf = CreateFile(cFileName, GENERIC_WRITE,
+	FILE_SHARE_READ, NULL, CREATE_ALWAYS, NULL, NULL);
+	if (hf == INVALID_HANDLE_VALUE) return 0;
+	// 写文件头
+	BITMAPFILEHEADER fileheader;
+	ZeroMemory(&fileheader, sizeof(BITMAPFILEHEADER));
+	fileheader.bfType = 'MB';
+	fileheader.bfSize = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + lBufferLen;
+	fileheader.bfOffBits = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
+	DWORD dwWritter = 0;
+	WriteFile(hf, &fileheader, sizeof(BITMAPFILEHEADER), &dwWritter, NULL);
+	// 写文图格式
+	BITMAPINFOHEADER infoHeader;
+	ZeroMemory(&infoHeader, sizeof(BITMAPINFOHEADER));
+	infoHeader.biSize = sizeof(BITMAPINFOHEADER);
+	infoHeader.biSizeImage = lBufferLen;
+	infoHeader.biWidth = s32Width;
+	infoHeader.biHeight = s32Height;
+	infoHeader.biBitCount = 24;
+	WriteFile(hf, &infoHeader, sizeof(BITMAPINFOHEADER), &dwWritter, NULL);
+	// 写位图数据
+	WriteFile(hf, pBuffer, lBufferLen, &dwWritter, NULL);
+	CloseHandle(hf);
+	//MessageBox(NULL, _T("Save bmp file succeed!"), _T("warn"), MB_OK | MB_ICONINFORMATION);
+	return 0;
 }

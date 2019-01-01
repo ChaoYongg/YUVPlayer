@@ -1,4 +1,4 @@
-#include <stdafx.h>
+#include "stdafx.h"
 #include "multithread.h"
 #include "YUVPlayerDlg.h"
 
@@ -38,7 +38,10 @@ uint32 play_video(LPVOID pParam)
 				{
 					if ((pCurrImg->s32CurrFrameNr - 1) >= 1)
 					{
-						pCurrImg->pFile->Seek(-2 * pCurrImg->u32FrameSize, CFile::current);
+#if LCU
+						long lOff = -2.0 * pCurrImg->u32FrameSize;
+						pCurrImg->pFile->Seek(lOff, CFile::current);
+#endif
 						pCurrImg->s32CurrFrameNr --;
 						SendMessage(pCurrImg->m_hWnd, WM_MYMESSAGE_1, pMainDlg->u8ImageMode, TRUE);
 						

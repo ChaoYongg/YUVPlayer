@@ -9,7 +9,6 @@
 
 #include "define.h"
 #include "ChildDlg.h"
-#include "CFile64.h"
 
 /////////////////////////////////////////////////////////////////////////////
 // CImageDlg dialog
@@ -36,7 +35,8 @@ public:
     CString	frameSize;
     CString	sampleFormat;
     CString zoomSize;
-    CFile64	*pFile;
+	CString bitDepth;
+    CFile	*pFile;
 
     void	free_resource();
     void	button_down_left();
@@ -95,7 +95,9 @@ private:
     void	rotate_image(LPBYTE pSrcY, LPBYTE pSrcU, LPBYTE pSrcV);
     void	mirror_image(LPBYTE pSrcY, LPBYTE pSrcU, LPBYTE pSrcV);
     int32	initial();
-    int32	read_one_frame(uint8 u8ImageMode);
+    int32	read_one_frame(uint8 u8ImageMode, bool bImageMode = true);
+public:
+	bool saveBitmap(TCHAR* fileName, long lBufferLen, int bmpIdx);
 };
 
 //{{AFX_INSERT_LOCATION}}
