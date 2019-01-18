@@ -1,11 +1,9 @@
-
 #include "stdafx.h"
 #include "ChildDlg.h"
 #include "YUVPlayerDlg.h"
 #include "multithread.h"
 #include <stdlib.h>
-#include "opencv2\opencv.hpp"
-using namespace cv;
+#include "opencv.h"
 
 CChildDlg::CChildDlg(UINT nID, CWnd* pParent /*=NULL*/)
 	: CDialog(nID, pParent)
