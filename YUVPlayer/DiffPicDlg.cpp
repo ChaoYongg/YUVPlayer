@@ -313,6 +313,8 @@ void CDiffPicDlg::get_one_frame(uint8 u8ImageMode)
 	case YUV444:
 	case RGB24:
 	case GBR24:
+	case NV12:
+	case NV21:
 		for (j = 0; j < s32Height; j++)
 		{
 			for (i = 0; i < s32Width; i++)
@@ -332,6 +334,8 @@ void CDiffPicDlg::get_one_frame(uint8 u8ImageMode)
 	case YUV444:
 	case RGB24:
 	case GBR24:
+	case NV12:
+	case NV21:
 		for (j = 0; j < s32CbHeight; j++)
 		{
 			for (i = 0; i < s32CbWidth; i++)
@@ -351,6 +355,8 @@ void CDiffPicDlg::get_one_frame(uint8 u8ImageMode)
 	case YUV444:
 	case RGB24:
 	case GBR24:
+	case NV12:
+	case NV21:
 		for (j = 0; j < s32CbHeight; j++)
 		{
 			for (i = 0; i < s32CbWidth; i++)
