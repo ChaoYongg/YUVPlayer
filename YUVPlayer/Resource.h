@@ -62,6 +62,9 @@
 #define IDC_BIT_DEPTH                   1049
 #define IDC_EDIT1                       1050
 #define IDC_BITDEPTH                    1050
+#define IDC_VIEW_PLANE1                 1052
+#define IDC_VIEW_PLANE2                 1053
+#define IDC_VIEW_PLANE3                 1054
 #define ID_MENUITEM_MBINFO0             32770
 #define ID_MENUITEM_MBINFO1             32771
 #define ID_MENUITEM_MBINFO2             32772
@@ -89,7 +92,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        133
 #define _APS_NEXT_COMMAND_VALUE         32792
-#define _APS_NEXT_CONTROL_VALUE         1051
+#define _APS_NEXT_CONTROL_VALUE         1056
 #define _APS_NEXT_SYMED_VALUE           108
 #endif
 #endif

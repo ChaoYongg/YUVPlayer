@@ -51,7 +51,7 @@ public:
 	int32	s32MBInfoDlgX;
 	int32	s32MBInfoDlgY;
 	float	fFrameRate;
-#if BITDEPTH //add
+#if CONFIG_PIXDEPTH_EXTEND //add
 	float   fBitDepth;
 #endif
     CRect   cLayout;
@@ -101,7 +101,7 @@ public:
 	CString	m_sFrameRate;
 	CString m_sbitDepth;
 	CString	m_sStartFrameNr;
-#if BITDEPTH
+#if CONFIG_PIXDEPTH_EXTEND
 //	CComboBox   m_bitDepth;
 //	CString m_sBitDepth;
 #endif
@@ -142,7 +142,7 @@ protected:
 	afx_msg void OnExit();
 	afx_msg void OnClose();
 	afx_msg void OnChangeFrameRate();
-#if BITDEPTH
+#if CONFIG_PIXDEPTH_EXTEND
 	afx_msg void OnChangeBitdepth();
 #endif
 	afx_msg void OnDropFiles(HDROP hDropInfo);
@@ -171,7 +171,7 @@ private:
 	void	change_frame_rate();
 	int32	get_sample_ratio();
 	int32	get_zoom_ratio();
-#if BITDEPTH//add
+#if CONFIG_PIXDEPTH_EXTEND//add
 	int32   get_bit_depth();
 	void    change_bit_depth();
 #endif
@@ -184,14 +184,14 @@ public:
 	CButton m_savePic;
 	void saveBitmap();
 
-//	CString m_sbitDepth;
-//	CString m_sbitDepth;
-//	CString m_sbitDepth;
-//	afx_msg void OnCbnSelchangeBitDepth();
-//	afx_msg void OnCbnSelchangeSampleFormat();
-
-//	CString m_sbitDepth;
-//	CString m_sBitDepth;
+	afx_msg void OnBnClickedRadio1();
+	CButton m_viewPlane2;
+	CButton m_viewPlane3;
+	CButton m_viewPlane1;
+	uint8 u8ViewPlane;
+	afx_msg void OnSetViewPlane1();
+	afx_msg void OnSetViewPlane2();
+	afx_msg void OnSetViewPlane3();
 };
 
 //{{AFX_INSERT_LOCATION}}

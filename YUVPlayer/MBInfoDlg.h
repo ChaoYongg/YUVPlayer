@@ -23,13 +23,13 @@ public:
 	uint8	u8LumaPointNumY;		//++ 亮度垂直方向需要显示的点数
 	uint8	u8ChroPointNumX;		//++ 色度水平方向需要显示的点数
 	uint8	u8ChroPointNumY;		//++ 色度垂直方向需要显示的点数
-	int32	pixelValue[26][17];		//++ 宏块像素值
+	int32	pixelValue[16*3+1][17];		//++ 宏块像素值  按3个平面的size来开辟
 	int32	s32GridWidth;			//++ 单元格宽度
 	int32	s32GridHeight;			//++ 单元格高度
 	int32	s32PixTableX;			//++ 表格顶点坐标
 	int32	s32PixTableY;			//++ 表格顶点坐标
-	CString	gridValue[26][17];		//++ 宏块像素值
-	CRect	gridRect[26][17];		//++ 单元格
+	CString	gridValue[16*3+1][17];		//++ 宏块像素值
+	CRect	gridRect[16 + 1][17];		//++ 单元格  只有一个平面单元格的空间
 	CFont	talbeFont;
 	CRect	oldRect;			//++ 被选定像素点标记区
 	CRect	newRect;			//++ 被选定像素点标记区

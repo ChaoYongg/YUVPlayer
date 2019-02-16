@@ -38,7 +38,7 @@ uint32 play_video(LPVOID pParam)
 				{
 					if ((pCurrImg->s32CurrFrameNr - 1) >= 1)
 					{
-#if LCU
+#if CONGIF_VIEW_LCU
 						long lOff = -2.0 * pCurrImg->u32FrameSize;
 						pCurrImg->pFile->Seek(lOff, CFile::current);
 #endif

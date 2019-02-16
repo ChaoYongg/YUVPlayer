@@ -72,7 +72,7 @@ CYUVPlayerDlg::CYUVPlayerDlg(CWnd* pParent /*=NULL*/)
 	m_sZoomSize = _T("100");
 	m_sFrameRate = _T("30");
 	m_sStartFrameNr = _T("1");
-#if BITDEPTH
+#if CONFIG_PIXDEPTH_EXTEND
 	m_sbitDepth = (_T("8"));
 #endif
 	//}}AFX_DATA_INIT
@@ -88,7 +88,7 @@ void CYUVPlayerDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_FRAME_RATE, m_frameRate);
 	DDX_Control(pDX, IDC_ZOOM, m_zoomSize);
 	DDX_Control(pDX, IDC_SAMPLE_FORMAT, m_sampleFormat);
-#if BITDEPTH
+#if CONFIG_PIXDEPTH_EXTEND
 	//  DDX_Control(pDX, IDC_BIT_DEPTH, m_bitDepth);
 	DDX_Control(pDX, IDC_BITDEPTH, m_bitDepth);
 #endif
@@ -108,7 +108,7 @@ void CYUVPlayerDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_CBString(pDX, IDC_FRAME_SIZE, m_sFrameSize);
 	DDX_CBString(pDX, IDC_SAMPLE_FORMAT, m_sSampleFormat);
 	DDX_CBString(pDX, IDC_ZOOM, m_sZoomSize);
-#if BITDEPTH
+#if CONFIG_PIXDEPTH_EXTEND
 	//  DDX_CBString(pDX, IDC_BIT_DEPTH, m_sBitDepth);
 #endif
 	DDX_Text(pDX, IDC_FRAME_RATE, m_sFrameRate);
@@ -119,6 +119,9 @@ void CYUVPlayerDlg::DoDataExchange(CDataExchange* pDX)
 	//  DDX_Text(pDX, IDC_BITDEPTH, m_sbitDepth);
 	//  DDX_Text(pDX, IDC_BITDEPTH, m_sBitDepth);
 
+	DDX_Control(pDX, IDC_VIEW_PLANE2, m_viewPlane2);
+	DDX_Control(pDX, IDC_VIEW_PLANE3, m_viewPlane3);
+	DDX_Control(pDX, IDC_VIEW_PLANE1, m_viewPlane1);
 }
 
 BEGIN_MESSAGE_MAP(CYUVPlayerDlg, CDialog)
@@ -150,9 +153,10 @@ BEGIN_MESSAGE_MAP(CYUVPlayerDlg, CDialog)
 	ON_MESSAGE(WM_MYMESSAGE_4, adjust_image)
 	//}}AFX_MSG_MAP
 	ON_BN_CLICKED(IDC_SAVE, &CYUVPlayerDlg::OnBnClickedSave)
-//	ON_CBN_SELCHANGE(IDC_BIT_DEPTH, &CYUVPlayerDlg::OnCbnSelchangeBitDepth)
-//	ON_CBN_SELCHANGE(IDC_SAMPLE_FORMAT, &CYUVPlayerDlg::OnCbnSelchangeSampleFormat)
-ON_EN_CHANGE(IDC_BITDEPTH, &CYUVPlayerDlg::OnChangeBitdepth)
+	ON_EN_CHANGE(IDC_BITDEPTH, &CYUVPlayerDlg::OnChangeBitdepth)
+	ON_BN_CLICKED(IDC_VIEW_PLANE1, &CYUVPlayerDlg::OnSetViewPlane1)
+	ON_BN_CLICKED(IDC_VIEW_PLANE2, &CYUVPlayerDlg::OnSetViewPlane2)
+	ON_BN_CLICKED(IDC_VIEW_PLANE3, &CYUVPlayerDlg::OnSetViewPlane3)
 END_MESSAGE_MAP()
 
 /////////////////////////////////////////////////////////////////////////////
@@ -186,7 +190,7 @@ BOOL CYUVPlayerDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 	
 	// TODO: Add extra initialization here
-	SetWindowText("YUVPlayer 1.5");
+	SetWindowText("YUVPlayer 1.6");
 	//++ 初始化临界区
 	CCriticalSection::initial(&m_CriticalSection);
 	//++ 打开配置文件，读入历史参数
@@ -233,6 +237,7 @@ void CYUVPlayerDlg::initial()
 	s8StopValue			= VALUE_INVALID;
 	s8PlusValue			= VALUE_INVALID;
 	u8PlayMode			= VIEW_MODE;
+	u8ViewPlane			= VIEW_PLANE1;
 	s8ImgNum			= 0;
 	u8EOFNum			= 0;
 	u8EOHNum			= 0;
@@ -240,9 +245,15 @@ void CYUVPlayerDlg::initial()
 	s32MBInfoDlgY		= 0;
 	pJumpFrameDlg		= NULL;
 	m_pPlayThread		= NULL;
+	
 	m_compMode.SetCheck(BST_UNCHECKED);
 	m_viewMode.SetCheck(BST_CHECKED);
 	m_viewMode.SetFocus();
+
+	m_viewPlane1.SetCheck(BST_CHECKED);
+	m_viewPlane1.SetFocus();
+	m_viewPlane2.SetCheck(BST_UNCHECKED);
+	m_viewPlane3.SetCheck(BST_UNCHECKED);
 
 	for (int32 s32ImgIdx = 0; s32ImgIdx < MAX_IMAGE_NUM; s32ImgIdx ++)
 	{
@@ -525,7 +536,7 @@ int32 CYUVPlayerDlg::creat_image_window(CString CurrFilePath)
 	pNewImg->frameSize			= m_sFrameSize;
 	pNewImg->sampleFormat		= m_sSampleFormat;
 	pNewImg->zoomSize			= m_sZoomSize;
-#if BITDEPTH
+#if CONFIG_PIXDEPTH_EXTEND
 	//pNewImg->bitDepth			= m_sBitDepth;
 #endif
 	pNewImg->pFile				= pCurrFile;
@@ -533,7 +544,7 @@ int32 CYUVPlayerDlg::creat_image_window(CString CurrFilePath)
     pNewImg->u8SampleFormat		= u8SampleFormat;
 	pNewImg->u8Sample_x = u8Sample_x;
 	pNewImg->u8Sample_y = u8Sample_y;
-#if BITDEPTH
+#if CONFIG_PIXDEPTH_EXTEND
 	pNewImg->u8BitDepth			= fBitDepth;
 #endif
 	pNewImg->s32SrcWidth		= s32Width;
@@ -583,7 +594,7 @@ void CYUVPlayerDlg::set_default_parameter_value()
 	m_sFrameSize	= pImage[0]->frameSize;
 	m_sSampleFormat	= pImage[0]->sampleFormat;
 	m_sZoomSize		= pImage[0]->zoomSize;
-#if BITDEPTH
+#if CONFIG_PIXDEPTH_EXTEND
 //	m_sBitDepth = pImage[0]->bitDepth;
 #endif
 	UpdateData(FALSE);
@@ -605,7 +616,7 @@ int32 CYUVPlayerDlg::get_input_parameter()
 		{
 			return FAILED_YUVPlayer;
 		}
-#if BITDEPTH
+#if CONFIG_PIXDEPTH_EXTEND
 		s32Ret = get_bit_depth();
 		if (s32Ret == FAILED_YUVPlayer)
 		{
@@ -629,13 +640,13 @@ int32 CYUVPlayerDlg::get_input_parameter()
 		s32Width		= pImage[0]->s32Width;
 		s32Height		= pImage[0]->s32Height;
 		u8SampleFormat	= pImage[0]->u8SampleFormat;
-#if BITDEPTH//add
+#if CONFIG_PIXDEPTH_EXTEND//add
 		//u8BitDepth		= pImage[0]->u8BitDepth;
 #endif
 	}
 
 	fFrameRate			 = atof(m_sFrameRate);
-#if BITDEPTH //add
+#if CONFIG_PIXDEPTH_EXTEND //add
 	fBitDepth = atoi(m_sbitDepth);
 	if ( (fBitDepth < 1) || fBitDepth >16 )
 	{
@@ -664,7 +675,7 @@ int32 CYUVPlayerDlg::get_input_parameter()
 
 	return SUCCEEDED_YUVPlayer;
 }
-#if BITDEPTH
+#if CONFIG_PIXDEPTH_EXTEND
 int32 CYUVPlayerDlg::get_bit_depth()
 {
 	/*int32 s32ItemIdx = m_bitDepth.GetCurSel();
@@ -672,10 +683,10 @@ int32 CYUVPlayerDlg::get_bit_depth()
 	switch (s32ItemIdx)
 	{
 	case 0:
-		u8BitDepth = BIT_DEPTH8;
+		u8BitDepth = BIT_DEPTH_8;
 		break;
 	case 1:
-		u8BitDepth = BIT_DEPTH10;
+		u8BitDepth = BIT_DEPTH_10;
 		break;
 	default:
 		AfxMessageBox("采样深度无效！", MB_ICONERROR);
@@ -708,7 +719,7 @@ int32 CYUVPlayerDlg::get_sample_ratio()
 		u8Sample_y = 0;
 		u8SampleFormat	= YUV422;
 		break;
-#if ADDFORMAT
+#if CONGIF_FORMAT_EXTEND
 	case 3:
 		u8Sample_x = 0;
 		u8Sample_y = 0;
@@ -717,12 +728,12 @@ int32 CYUVPlayerDlg::get_sample_ratio()
 	case 4:
 		u8Sample_x = 0;
 		u8Sample_y = 0;
-		u8SampleFormat	= RGB8;
+		u8SampleFormat	= RGB24;
 		break;
 	case 5:
 		u8Sample_x = 0;
 		u8Sample_y = 0;
-		u8SampleFormat	= GBR8;
+		u8SampleFormat	= GBR24;
 		break;
 	case 6:
 		u8Sample_x = 1;
@@ -857,7 +868,7 @@ void CYUVPlayerDlg::set_input_parameter_status(uint8 u8Status)
 	m_zoomSize.EnableWindow(u8Status);
 	m_frameSize.EnableWindow(u8Status);
 	m_sampleFormat.EnableWindow(u8Status);
-#if BITDEPTH//add
+#if CONFIG_PIXDEPTH_EXTEND//add
 	//m_bitDepth.EnableWindow(u8Status);
 #endif
 }
@@ -876,7 +887,7 @@ void CYUVPlayerDlg::set_button_status(uint8 u8Status)
 	m_bkOneStep.EnableWindow(u8Status);
 	m_bkMultiStep.EnableWindow(u8Status);
 	m_fwMultiStep.EnableWindow(u8Status);
-#if LCU
+#if CONGIF_VIEW_LCU
 	m_savePic.EnableWindow(u8Status);
 #endif
 	u8PlayStatus	 = u8Status;
@@ -1225,7 +1236,7 @@ void CYUVPlayerDlg::change_frame_rate()
 	}
 }
 
-#if BITDEPTH //add
+#if CONFIG_PIXDEPTH_EXTEND //add
 void CYUVPlayerDlg::change_bit_depth()
 {
 	uint8	u8NewBitDepth;
@@ -1453,7 +1464,7 @@ void CYUVPlayerDlg::backward_one_step()
 			{
 				if ((pCurrImg->s32CurrFrameNr - 1) >= 1)
 				{
-#if LCU
+#if CONGIF_VIEW_LCU
 					long lOff = -2.0 * pCurrImg->u32FrameSize;
 					pCurrImg->pFile->Seek(lOff, CFile::current);
 #endif
@@ -1524,7 +1535,7 @@ void CYUVPlayerDlg::backward_multistep()
 			{
 				if ((pCurrImg->s32CurrFrameNr - 5) >= 1)
 				{
-#if LCU
+#if CONGIF_VIEW_LCU
 					long lOff = -6.0 * pCurrImg->u32FrameSize;
 					pCurrImg->pFile->Seek(lOff , CFile::current);// - 6 * pCurrImg->u32FrameSize
 #endif
@@ -1631,7 +1642,7 @@ void CYUVPlayerDlg::close_image(int8 s8DlgIdx)
 	for (s32ImgIdx = 0; s32ImgIdx < s8ImgNum; s32ImgIdx ++)
 	{
 		adjust_window_position(pImage[s32ImgIdx]);
-		pImage[s32ImgIdx]->MBInfoDlg.MoveWindow((s8DlgIdx % 3) * 425, (s8DlgIdx / 3) * 16, 530/*425*/, 490/*470*/, FALSE);
+		pImage[s32ImgIdx]->MBInfoDlg.MoveWindow((s8DlgIdx % 3) * 425, (s8DlgIdx / 3) * 16, WINSIZE_WIDTH, WINSIZE_HEIGHT, FALSE);
 	}
 
 	if (s8ImgNum == 0)
@@ -1670,7 +1681,7 @@ void CYUVPlayerDlg::OnResetPic()
 		pCurrImg->s32ViewBlkY		 = -100;
 		pCurrImg->s32PrevBlkX		 = -100;
 		pCurrImg->s32PrevBlkY		 = -100;
-#if LCU
+#if CONGIF_VIEW_LCU
 		pCurrImg->s32ViewBlkX_Lcu = -100;
 		pCurrImg->s32ViewBlkY_Lcu = -100;
 		pCurrImg->s32PrevBlkX_Lcu = -100;
@@ -1725,7 +1736,7 @@ void CYUVPlayerDlg::hide_MBinfo_dlg()
 		pImage[s32ImgIdx]->s32ViewBlkY		 = -100;
 		pImage[s32ImgIdx]->s32PrevBlkX		 = -100;
 		pImage[s32ImgIdx]->s32PrevBlkY		 = -100;
-#if LCU
+#if CONGIF_VIEW_LCU
 		pImage[s32ImgIdx]->s32ViewBlkX_Lcu = -100;
 		pImage[s32ImgIdx]->s32ViewBlkY_Lcu = -100;
 		pImage[s32ImgIdx]->s32PrevBlkX_Lcu = -100;
@@ -1743,7 +1754,7 @@ void CYUVPlayerDlg::hide_MBinfo_dlg()
 		diffPic.s32ViewBlkY		 = -100;
 		diffPic.s32PrevBlkX		 = -100;
 		diffPic.s32PrevBlkY		 = -100;
-#if LCU
+#if CONGIF_VIEW_LCU
 		diffPic.s32ViewBlkX_Lcu = -100;
 		diffPic.s32ViewBlkY_Lcu = -100;
 		diffPic.s32PrevBlkX_Lcu = -100;
@@ -1809,7 +1820,7 @@ LRESULT CYUVPlayerDlg::adjust_image(WPARAM wParam, LPARAM lParam)
 	pNewImg->pFile				= pCurrFile;
 	pNewImg->s8DlgIdx			= pCurrImage->s8DlgIdx;
     pNewImg->u8SampleFormat		= pCurrImage->u8SampleFormat;
-#if BITDEPTH
+#if CONFIG_PIXDEPTH_EXTEND
 	pNewImg->u8BitDepth = fBitDepth;
 #endif
 	pNewImg->s32SrcWidth		= pCurrImage->s32SrcWidth;
@@ -2114,7 +2125,7 @@ void CYUVPlayerDlg::OnRButtonUp(UINT nFlags, CPoint point)
 	CDialog::OnRButtonUp(nFlags, point);
 }
 
-#if LCU
+#if CONGIF_VIEW_LCU
 #endif
 void CYUVPlayerDlg::OnBnClickedSave()
 {
@@ -2169,16 +2180,36 @@ void CYUVPlayerDlg::saveBitmap()
 	}
 }
 
+void CYUVPlayerDlg::OnSetViewPlane1()
+{
+	// TODO:  在此添加控件通知处理程序代码
+	m_viewPlane1.SetCheck(BST_CHECKED);
+	m_viewPlane2.SetCheck(BST_UNCHECKED);
+	m_viewPlane3.SetCheck(BST_UNCHECKED);
+	m_viewPlane1.SetFocus();
 
-//void CYUVPlayerDlg::OnCbnSelchangeBitDepth()
-//{
-//	// TODO:  在此添加控件通知处理程序代码
-//}
+	u8ViewPlane = VIEW_PLANE1;
+}
+
+void CYUVPlayerDlg::OnSetViewPlane2()
+{
+	// TODO:  在此添加控件通知处理程序代码
+	m_viewPlane1.SetCheck(BST_UNCHECKED);
+	m_viewPlane2.SetCheck(BST_CHECKED);
+	m_viewPlane3.SetCheck(BST_UNCHECKED);
+	m_viewPlane2.SetFocus();
+
+	u8ViewPlane = VIEW_PLANE2;
+}
 
 
-//void CYUVPlayerDlg::OnCbnSelchangeSampleFormat()
-//{
-//	// TODO:  在此添加控件通知处理程序代码
-//}
+void CYUVPlayerDlg::OnSetViewPlane3()
+{
+	// TODO:  在此添加控件通知处理程序代码
+	m_viewPlane1.SetCheck(BST_UNCHECKED);
+	m_viewPlane2.SetCheck(BST_UNCHECKED);
+	m_viewPlane3.SetCheck(BST_CHECKED);
+	m_viewPlane3.SetFocus();
 
-
+	u8ViewPlane = VIEW_PLANE3;
+}

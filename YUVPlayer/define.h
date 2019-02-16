@@ -10,13 +10,20 @@ typedef		unsigned int		uint32;
 typedef		unsigned short		uint16;
 typedef		unsigned __int64	uint64;
 
-//#define		LOGINFO
-#define     LCU                 1  //增加显示LCU  MBInfoDlg.MoveWindow((s8DlgIdx % 3) * 425, (s8DlgIdx / 3) * 16, 430, 490, FALSE);//改变窗口大小
-#define     ADDFORMAT           1  //增加采样格式 rgb  gbr格式
-#define     BITDEPTH            1  //增加位深8-16bit
-#define     MEMORYER              1  //暂时没用
-#define     PIXMEND             1  //MB_Info  支持8bit以上像素值信息的显示
+//======== 自定义扩展功能宏 =======
+#define		CONGIF_VIEW_PLANE					1  //像素平面的显示
+#define     CONFIG_PIXDEPTH_EXTEND				1  //MB_Info  支持8bit-16bit像素值信息的显示
+#define     CONGIF_VIEW_LCU						1  //增加显示CONGIF_VIEW_LCU  MBInfoDlg.MoveWindow((s8DlgIdx % 3) * 425, (s8DlgIdx / 3) * 16, 430, 490, FALSE);//改变窗口大小
+#define     CONGIF_FORMAT_EXTEND				1  //增加采样格式 rgb  gbr格式
+//#define   MEMORYER						    1  //暂时没用
+//#define	LOGINFO
 
+//======== 定义显示窗口的大小 =======
+#define		WINSIZE_WIDTH						540
+#define		WINSIZE_HEIGHT						425
+
+
+//======== 定义TRUE OR FALSE =======
 #define		TRUE                1
 #define		FALSE               0
 
@@ -68,16 +75,16 @@ typedef		unsigned __int64	uint64;
 #define		YUV422				2
 #define		YUV444				3
 
-#define     RGB8                4
-#define     GBR8                5
+#define     RGB24                4
+#define     GBR24                5
 
 #define     NV12				6
 #define     NV21                7
 
 //======= 图像采样深度 =======
-#if BITDEPTH
-#define     BIT_DEPTH8           8
-#define     BIT_DEPTH10          1
+#if CONFIG_PIXDEPTH_EXTEND
+#define     BIT_DEPTH_8           8
+#define     BIT_DEPTH_10          1
 #endif
 
 //======= 播放状态 =======
@@ -88,6 +95,11 @@ typedef		unsigned __int64	uint64;
 //======= 像素值显示方式 =======
 #define		OCT_MODE			0
 #define		HEX_MODE			1
+
+//======= 像素显示平面 =========
+#define		VIEW_PLANE1			0
+#define		VIEW_PLANE2			1
+#define		VIEW_PLANE3			2
 
 //======= 自定义消息 =======
 #define		WM_MYMESSAGE_0		(WM_USER + 100)	//++ 通知主线程播放已经停止
@@ -122,10 +134,10 @@ typedef		unsigned __int64	uint64;
 #define		PAUSE_VALUE_13		13
 #define		PAUSE_VALUE_14		14
 #define		VALUE_INVALID		-1
-#if LCU
+#if CONGIF_VIEW_LCU
 #define     PAUSE_VALUE_15      15
 #endif
-#if BITDEPTH
+#if CONFIG_PIXDEPTH_EXTEND
 #define     PAUSE_VALUE_16      16
 #endif
 #endif

@@ -16,14 +16,14 @@ public:
     uint8   u8SampleFormat;
 	uint8   u8Sample_x;		//++图像水平方向采样格式
 	uint8   u8Sample_y;		//++图像垂直方向采样格式
-#if BITDEPTH//add
+#if CONFIG_PIXDEPTH_EXTEND//add
 	uint8   u8BitDepth;
 #endif
     int32	s32MBXNum;		//++ 一行宏块个数
     int32	s32MBYNum;		//++ 一列宏块个数
     int32	s32MBXIdx;		//++ 当前宏块所在列号（缩放前）
     int32	s32MBYIdx;		//++ 当前宏块所在行号（缩放前）
-#if LCU
+#if CONGIF_VIEW_LCU
 	int32	s32MBXIdx_Lcu;		//++ 当前宏块所在列号（缩放前）
 	int32	s32MBYIdx_Lcu;		//++ 当前宏块所在行号（缩放前）
 	int32	s32CurrMBx_Lcu;		//++ 鼠标经过的宏块的顶点坐标（缩放前）
@@ -90,6 +90,8 @@ public:
 
     void	resize_window();
     void	get_pixel_value();
+	void    separate_pix_from_3plane();
+	void    separate_pix_from_2plane();
     void	set_bmp_parameter();
     void    enable_mbinfo_dlg();
     void    disable_mbinfo_dlg();
@@ -99,8 +101,10 @@ public:
     void	show_macroblock_info();
     void	view_macroblock();
     void	color_space_convert(uint8 u8ImageMode);
+	void	copy_cb_to_y_plane(uint8 *pDisplayLuma, uint8* pCbPlane);
+	void	calculate_pixels_pos(int32 x, int32 yStride, int32 cbStride, int *yPos, int *cbPos, uint8 u8ImageMode);
+	void	convert_yuv_to_rgb(int32 x, int32 k, int32 yPos, int32 cbPos, uint8* pu8Y, uint8* pu8U, uint8* pu8V, uint8 u8ImageMode);
 	void	YV12_to_RGB24(uint8* pu8Y, uint8* pu8U, uint8* pu8V, uint8 u8ImageMode=0);
-	void	YUY2_to_RGB24(uint8 *pu8RGBData, uint8 *pu8YUVData);
     void	set_image_mode(uint8 u8ImageMode);
     void	draw_dash_frame(CRect &rect);
 	void	change_size(LPRECT pRect);

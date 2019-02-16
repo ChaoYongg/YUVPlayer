@@ -53,9 +53,9 @@ void CMBInfoDlg::initial()
 	u8ShowMark			 = FALSE;
 	u8ValueMode			 = OCT_MODE;
 	s32GridWidth = 30;//24;
-	s32GridHeight = 13;//13;
-	s32PixTableX         =  3;
-	s32PixTableY		 = 100;
+	s32GridHeight = 15;//13;
+	s32PixTableX         =  5;
+	s32PixTableY		 = 115;
 	m_sMBInfo			 = _T("");
 	oldRect.SetRect(-100, -100, -100, -100);
 	//++ 创建像素表格使用的字体
@@ -91,7 +91,7 @@ void CMBInfoDlg::create_window(CWnd *pWnd)
 	//++ 亮度水平表头单元格
 	gridRect[0][0].left		 = s32PixTableX;
 	gridRect[0][0].top		 = s32PixTableY;
-	gridRect[0][0].right	 = s32PixTableX + s32GridWidth + 1;
+	gridRect[0][0].right	 = s32PixTableX + s32GridWidth + 1 ;
 	gridRect[0][0].bottom	 = s32PixTableY + s32GridHeight + 1;
 	for (i = 1; i < 17; i++)
 	{
@@ -118,7 +118,7 @@ void CMBInfoDlg::create_window(CWnd *pWnd)
 			gridRect[j][i].bottom	 = gridRect[j][i - 1].bottom;
 		}
 	}
-
+#if !CONGIF_VIEW_PLANE //让色度单独显示
 	//++ 色度水平表头单元格
 	for (i = 0; i < 17; i++)
 	{
@@ -145,6 +145,7 @@ void CMBInfoDlg::create_window(CWnd *pWnd)
 			gridRect[j][i].bottom	 = gridRect[j][i - 1].bottom;
 		}
 	}
+#endif
 }
 
 void CMBInfoDlg::draw_pixel_table()
@@ -153,7 +154,6 @@ void CMBInfoDlg::draw_pixel_table()
 	int32		j;
 	uint32		u32DrawFormat	 = DT_CENTER | DT_VCENTER | DT_NOCLIP;
 	CClientDC	currDC(this);
-
 
 	//++ 选择字体
 	currDC.SelectObject(&talbeFont);
@@ -166,8 +166,8 @@ void CMBInfoDlg::draw_pixel_table()
 	//========== 绘制表头 ==========
 	//++ 设置字体颜色
 	currDC.SetTextColor(RGB(0, 0, 255));
-	currDC.DrawText("Y" , &(gridRect[0 ][0]), u32DrawFormat);
-	currDC.DrawText("UV", &(gridRect[17][0]), u32DrawFormat);
+	currDC.DrawText("Pixels" , &(gridRect[0 ][0]), u32DrawFormat);
+
 	//++ 设置字体颜色
 	currDC.SetTextColor(RGB(255, 0, 0));
 
@@ -176,20 +176,11 @@ void CMBInfoDlg::draw_pixel_table()
 		//---------- 亮度水平表头 ----------
 		gridValue[0][i].Format("%d", i - 1);
 		currDC.DrawText(gridValue[0][i], &(gridRect[0][i]), u32DrawFormat);
-		//---------- 色度水平表头 ----------
-		gridValue[17][i].Format("%d", (i - 1) % 8);
-		currDC.DrawText(gridValue[17][i], &(gridRect[17][i]), u32DrawFormat);
 	}
 	//---------- 亮度垂直表头 ----------
 	for (j = 1; j < 17; j ++)
 	{
 		gridValue[j][0].Format("%d", j - 1);
-		currDC.DrawText(gridValue[j][0], &(gridRect[j][0]), u32DrawFormat);
-	}
-	//---------- 色度垂直表头 ----------
-	for (j = 18; j < 26; j ++)
-	{
-		gridValue[j][0].Format("%d", j - 18);
 		currDC.DrawText(gridValue[j][0], &(gridRect[j][0]), u32DrawFormat);
 	}
 
@@ -204,7 +195,7 @@ void CMBInfoDlg::get_grid_value()
 	int32	j;
 	CString textFormat;
 
-
+	//设置像素显示格式
 	if (u8ValueMode == HEX_MODE)
 	{
 		textFormat	 = "x%X";	//++ 显示十六进制值
@@ -213,18 +204,15 @@ void CMBInfoDlg::get_grid_value()
 	{
 		textFormat	 = "%d";	//++ 显示十进制值
 	}
-
+	//清空像素显示grid中的值
 	for (i = 1; i < 17; i ++)
 	{
 		for (j = 1; j < 17; j ++)
 		{
 			gridValue[j][i].Format("");
 		}
-		for (j = 18; j < 26; j ++)
-		{
-			gridValue[j][i].Format("");
-		}
 	}
+	//取亮度值到grid中
 	for (j = 1; j < 1 + u8LumaPointNumY; j ++)
 	{
 		for (i = 1; i < 1 + u8LumaPointNumX; i ++)
@@ -232,14 +220,18 @@ void CMBInfoDlg::get_grid_value()
 			gridValue[j][i].Format(textFormat, pixelValue[j][i]);
 		}
 	}
-	for (j = 18; j < 18 + u8ChroPointNumY; j ++)
+	//取色度第一平面的值到grid中
+	for (j = 17; j < 17 + u8ChroPointNumY; j++)
 	{
-		for (i = 1; i < 1 + u8ChroPointNumX; i ++)
+		for (i = 1; i < 1 + u8ChroPointNumX; i++)
 		{
 			gridValue[j][i].Format(textFormat, pixelValue[j][i]);
 		}
-
-		for (i = 9; i < 9 + u8ChroPointNumX; i ++)
+	}
+	//取色度第二平面的值到grid中
+	for (j = 33; j < 33 + u8ChroPointNumY; j++)
+	{
+		for (i = 1; i < 1 + u8ChroPointNumX; i++)
 		{
 			gridValue[j][i].Format(textFormat, pixelValue[j][i]);
 		}
@@ -251,6 +243,8 @@ void CMBInfoDlg::draw_pixel_value()
 	int32		i;
 	int32		j;
 	uint32		u32DrawFormat	 = DT_CENTER | DT_VCENTER | DT_NOCLIP;
+	CYUVPlayerDlg	*pMainDlg = (CYUVPlayerDlg *)(AfxGetMainWnd());
+
 	CClientDC	currDC(this);
 
 	get_grid_value();
@@ -268,18 +262,46 @@ void CMBInfoDlg::draw_pixel_value()
 	grayPen.CreatePen(PS_SOLID, 1, RGB(192, 192, 192));
 	currDC.SelectObject(&grayPen);
 
-	for (i = 1; i < 17; i ++)
+	//清空像素值
+	for (i = 1; i < 17; i++)
 	{
-		for (j = 1; j < 17; j ++)
+		for (j = 1; j < 17; j++)
 		{
 			currDC.Rectangle(gridRect[j][i]);
-			currDC.DrawText(gridValue[j][i], &(gridRect[j][i]), u32DrawFormat);
+			currDC.DrawText("", &(gridRect[j][i]), u32DrawFormat);
 		}
-		
-		for (j = 18; j < 26; j ++)
-		{
-			currDC.Rectangle(gridRect[j][i]);
-			currDC.DrawText(gridValue[j][i], &(gridRect[j][i]), u32DrawFormat);
+	}
+	//将亮度分量的值放到画板中
+	for (i = 1; i < 1 + u8LumaPointNumX; i++)
+	{
+		if (pMainDlg->u8ViewPlane == 0)	{
+			for (j = 1; j < 1 + u8LumaPointNumY; j++)
+			{
+				currDC.Rectangle(gridRect[j][i]);
+				currDC.DrawText(gridValue[j][i], &(gridRect[j][i]), u32DrawFormat);
+			}
+		}
+	}
+	//将色度分量第一平面的值放到画板中
+	for (i = 1; i < 1 + u8ChroPointNumX; i++)
+	{
+		if (pMainDlg->u8ViewPlane == 1){
+			for (j = 17; j < 17 + u8ChroPointNumY; j++)
+			{
+				currDC.Rectangle(gridRect[j-16][i]);
+				currDC.DrawText(gridValue[j][i], &(gridRect[j - 16][i]), u32DrawFormat);
+			}
+		}
+	}
+	//将色度分量第二平面的值放到画板中
+	for (i = 1; i < 1 + u8ChroPointNumX; i++)
+	{
+		if (pMainDlg->u8ViewPlane == 2){
+			for (j = 33; j < 33 + u8ChroPointNumY; j++)
+			{
+				currDC.Rectangle(gridRect[j-32][i]);
+				currDC.DrawText(gridValue[j][i], &(gridRect[j-32][i]), u32DrawFormat);
+			}
 		}
 	}
 
@@ -294,16 +316,7 @@ void CMBInfoDlg::draw_pixel_value()
 	currDC.LineTo(gridRect[0][16].right - 1, gridRect[1][0].top);
 	currDC.LineTo(gridRect[0][16].right - 1, gridRect[16][16].bottom - 1);
 	currDC.LineTo(gridRect[16][1].left, gridRect[16][16].bottom - 1);
-	currDC.LineTo(gridRect[0][1].left, gridRect[1][0].top);
-	
-	currDC.MoveTo(gridRect[18][1].left, gridRect[18][0].top);
-	currDC.LineTo(gridRect[18][16].right - 1, gridRect[18][0].top);
-	currDC.LineTo(gridRect[18][16].right - 1, gridRect[25][16].bottom - 1);
-	currDC.LineTo(gridRect[25][1].left, gridRect[25][16].bottom - 1);
-	currDC.LineTo(gridRect[18][1].left, gridRect[18][0].top);
-	
-	currDC.MoveTo(gridRect[18][9].left, gridRect[18][9].top);
-	currDC.LineTo(gridRect[25][9].left, gridRect[25][9].bottom);
+	currDC.LineTo(gridRect[16][1].left, gridRect[1][0].top);
 	
 	redPen.DeleteObject();
 	grayPen.DeleteObject();
@@ -334,11 +347,11 @@ void CMBInfoDlg::draw_mark(CRect &currRect)
 	currDC.MoveTo(s32MarkLineX, s32PixTableY);
 	currDC.LineTo(s32MarkLineX, currRect.top);
 	currDC.MoveTo(s32MarkLineX, currRect.bottom);
-	currDC.LineTo(s32MarkLineX, gridRect[25][16].bottom);
+	currDC.LineTo(s32MarkLineX, gridRect[16][16].bottom);
 	currDC.MoveTo(s32PixTableX, s32MarkLineY);
 	currDC.LineTo(currRect.left, s32MarkLineY);
 	currDC.MoveTo(currRect.right, s32MarkLineY);
-	currDC.LineTo(gridRect[25][16].right, s32MarkLineY);
+	currDC.LineTo(gridRect[16][16].right, s32MarkLineY);
 	
 	redPen.DeleteObject();
 }
@@ -368,12 +381,12 @@ void CMBInfoDlg::OnMouseMove(UINT nFlags, CPoint point)
 	{
 		if ((point.x > gridRect[0][0].right) && (point.x < gridRect[0][16].right - 1)
 			&& (((point.y > gridRect[0][0].bottom) && (point.y < (gridRect[16][0].bottom - 1)))
-			|| ((point.y > gridRect[17][0].bottom) && (point.y < (gridRect[25][0].bottom - 1)))))
+			/*|| ((point.y > gridRect[17][0].bottom) && (point.y < (gridRect[25][0].bottom - 1)))*/))
 		{
 			int32	s32CurrGridX	 = (point.x - s32PixTableX) / s32GridWidth;
 			int32	s32CurrGridY	 = (point.y - s32PixTableY) / s32GridHeight;
 
-			if (point.y > gridRect[17][0].bottom)
+			if (point.y > gridRect[16][0].bottom)
 			{
 				s32CurrGridY	-= 1;
 			}
@@ -437,7 +450,7 @@ void CMBInfoDlg::OnLButtonDown(UINT nFlags, CPoint point)
 
 	if ((point.x > gridRect[0][0].right) && (point.x < gridRect[0][16].right - 1)
 		&& (((point.y > gridRect[0][0].bottom) && (point.y < (gridRect[16][0].bottom - 1)))
-		|| ((point.y > gridRect[17][0].bottom) && (point.y < (gridRect[25][0].bottom - 1)))))
+		/*|| ((point.y > gridRect[17][0].bottom) && (point.y < (gridRect[25][0].bottom - 1)))*/))
 	{
 		u8ShowMark	 = !u8ShowMark;
 		
@@ -446,7 +459,8 @@ void CMBInfoDlg::OnLButtonDown(UINT nFlags, CPoint point)
 		
 		if (u8ShowMark == TRUE)
 		{
-			if (point.y > gridRect[17][0].bottom)
+			
+			if (point.y > gridRect[16][0].bottom)
 			{
 				s32CurrGridY	-= 1;
 			}
@@ -580,7 +594,7 @@ void CMBInfoDlg::OnClose()
 	pCurrWnd->s32ViewBlkY		= -100;
 	pCurrWnd->s32PrevBlkX		= -100;
 	pCurrWnd->s32PrevBlkY		= -100;
-#if LCU
+#if CONGIF_VIEW_LCU
 	pCurrWnd->s32ViewBlkX_Lcu = -100;
 	pCurrWnd->s32ViewBlkY_Lcu = -100;
 	pCurrWnd->s32PrevBlkX_Lcu = -100;

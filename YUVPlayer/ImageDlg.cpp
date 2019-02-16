@@ -90,10 +90,9 @@ int32 CImageDlg::create_window(CWnd *pMainDlg)
 #endif
 	//++ 创建宏块信息窗口 
 	MBInfoDlg.create_window((CWnd *)this);
-#if LCU
-	MBInfoDlg.MoveWindow((s8DlgIdx % 3) * 425, (s8DlgIdx / 3) * 16, 530/*430*/, 490, FALSE);//改变窗口大小
+#if CONGIF_VIEW_LCU
+	MBInfoDlg.MoveWindow((s8DlgIdx % 3) * 425, (s8DlgIdx / 3) * 16, WINSIZE_WIDTH, WINSIZE_HEIGHT, FALSE);//改变窗口大小
 #endif
-//	MBInfoDlg.MoveWindow((s8DlgIdx % 3) * 425, (s8DlgIdx / 3) * 16, 425, 470, FALSE);
 
 #ifdef LOGINFO
 	CLog("创建图像窗口>>创建跳转帧号窗口");
@@ -132,9 +131,9 @@ int32 CImageDlg::initial()
 		s32FrameNum		 = pFile->GetLength() / u32FrameSize;
 		break;
 
-#if  ADDFORMAT
-	case RGB8:
-	case GBR8:
+#if  CONGIF_FORMAT_EXTEND
+	case RGB24:
+	case GBR24:
 	case YUV444:
 		u32ChroPicSize = s32Width * s32Height;
 		u32FrameSize = u32LumaPicSize + (u32ChroPicSize << 1);
@@ -150,8 +149,8 @@ int32 CImageDlg::initial()
     default:
         break;
     }
-#if BITDEPTH//add
-	if (u8BitDepth != BIT_DEPTH8)
+#if CONFIG_PIXDEPTH_EXTEND//add
+	if (u8BitDepth != BIT_DEPTH_8)
 	{
 		u32LumaPicSize = s32Height * (s32Width<<1);//<< 1;
 		u32ChroPicSize = u32ChroPicSize * 2;//;(s32Width >> 1)*(s32Height >> 1) << 1;
@@ -232,7 +231,7 @@ void CImageDlg::OnPaint()
     show_image(&dc);
 	//++ 防止窗口被遮挡后，窗口上标记的内容丢失
 	remark_macroblock(&dc);
-#if LCU
+#if CONGIF_VIEW_LCU
 	//去掉黄色框在这里 不然黄色框一直出现
 #endif
 	// Do not call CFrameWnd::OnPaint() for painting messages
@@ -297,9 +296,9 @@ void CImageDlg::rotate_image(LPBYTE pSrcY, LPBYTE pSrcU, LPBYTE pSrcV)
 			}
 			
 			break;
-#if ADDFORMAT
-		case RGB8:
-		case GBR8:
+#if CONGIF_FORMAT_EXTEND
+		case RGB24:
+		case GBR24:
 		case YUV444:
 			pu8SrcU = pSrcU + (s32SrcWidth );
 			pu8SrcV = pSrcV + (s32SrcWidth );
@@ -374,9 +373,9 @@ void CImageDlg::rotate_image(LPBYTE pSrcY, LPBYTE pSrcU, LPBYTE pSrcV)
 				pu8DstY	-= s32SrcWidth;
 			}
 			break;
-#if ADDFORMAT
-		case RGB8:
-		case GBR8:
+#if CONGIF_FORMAT_EXTEND
+		case RGB24:
+		case GBR24:
 		case YUV444:
 			pu8SrcU = pSrcU;
 			pu8SrcV = pSrcV;
@@ -451,9 +450,9 @@ void CImageDlg::rotate_image(LPBYTE pSrcY, LPBYTE pSrcU, LPBYTE pSrcV)
 			}
 			
 			break;
-#if ADDFORMAT
-		case RGB8:
-		case GBR8:
+#if CONGIF_FORMAT_EXTEND
+		case RGB24:
+		case GBR24:
 		case YUV444:
 			pu8SrcU = pSrcU;
 			pu8SrcV = pSrcV;
@@ -536,9 +535,9 @@ void CImageDlg::mirror_image(LPBYTE pSrcY, LPBYTE pSrcU, LPBYTE pSrcV)
 			}
 
 			break;
-#if ADDFORMAT
-		case RGB8:
-		case GBR8:
+#if CONGIF_FORMAT_EXTEND
+		case RGB24:
+		case GBR24:
 		case YUV444:
 			for (i = 0; i < u32ChroPicSize; i++)
 			{
@@ -568,8 +567,8 @@ void CImageDlg::mirror_image(LPBYTE pSrcY, LPBYTE pSrcU, LPBYTE pSrcV)
 			{
 				for (i = 0; i < (s32Width >> 1); i ++)
 				{
-#if BITDEPTH
-					if(u8BitDepth != BIT_DEPTH8)
+#if CONFIG_PIXDEPTH_EXTEND
+					if(u8BitDepth != BIT_DEPTH_8)
 					{
 						pu8DstU[(i << 1) + 1] = pu8SrcU[s32Width - 1 - (i<<1)];
 						pu8DstU[(i << 1)] = pu8SrcU[s32Width - 1 - (i << 1) - 1];
@@ -588,8 +587,8 @@ void CImageDlg::mirror_image(LPBYTE pSrcY, LPBYTE pSrcU, LPBYTE pSrcV)
 #endif
 				}
 				
-#if BITDEPTH
-				if(u8BitDepth != BIT_DEPTH8)
+#if CONFIG_PIXDEPTH_EXTEND
+				if(u8BitDepth != BIT_DEPTH_8)
 				{
 					pu8SrcU	+= s32Width;
 					pu8DstU	+= s32Width;
@@ -617,8 +616,8 @@ void CImageDlg::mirror_image(LPBYTE pSrcY, LPBYTE pSrcU, LPBYTE pSrcV)
 			{
 				for (i = 0; i < s32Width; i ++)
 				{
-#if BITDEPTH
-					if (u8BitDepth != BIT_DEPTH8)
+#if CONFIG_PIXDEPTH_EXTEND
+					if (u8BitDepth != BIT_DEPTH_8)
 					{
 						pu8DstY[(i*2) + 1] = pu8SrcY[(s32Width*2) - 1 - (i<<1)];
 						pu8DstY[(i*2) ] = pu8SrcY[(s32Width*2) - 1 - (i<<1) - 1 ];
@@ -631,8 +630,8 @@ void CImageDlg::mirror_image(LPBYTE pSrcY, LPBYTE pSrcU, LPBYTE pSrcV)
 					pu8DstY[i] = pu8SrcY[s32Width - 1 - i];
 #endif
 				}	
-#if BITDEPTH
-				if (u8BitDepth != BIT_DEPTH8)
+#if CONFIG_PIXDEPTH_EXTEND
+				if (u8BitDepth != BIT_DEPTH_8)
 				{
 					pu8DstY	+= (s32Width*2);
 					pu8SrcY	+= (s32Width*2);	
@@ -649,9 +648,9 @@ void CImageDlg::mirror_image(LPBYTE pSrcY, LPBYTE pSrcU, LPBYTE pSrcV)
 			}
 			
 			break;
-#if ADDFORMAT
-		case RGB8:
-		case GBR8:
+#if CONGIF_FORMAT_EXTEND
+		case RGB24:
+		case GBR24:
 		case YUV444:
 			pu8SrcU = pSrcU;
 			pu8SrcV = pSrcV;
@@ -728,9 +727,9 @@ void CImageDlg::mirror_image(LPBYTE pSrcY, LPBYTE pSrcU, LPBYTE pSrcV)
 			}
 			
 			break;
-#if ADDFORMAT
-		case RGB8:
-		case GBR8:
+#if CONGIF_FORMAT_EXTEND
+		case RGB24:
+		case GBR24:
 		case YUV444:
 			pu8SrcU = pSrcU;
 			pu8SrcV = pSrcV;
@@ -781,77 +780,84 @@ int32 CImageDlg::read_one_frame(uint8 u8ImageMode, bool bImageMode)
 	//++ 启用临界区保护
 	CCriticalSection	CriticalSection(pCriticalSection);
 
-	//CYUVPlayerDlg	*pMainDlg = (CYUVPlayerDlg *)this->pMainDlg;
 	if (bImageMode)
+	{
 		switch (u8SampleFormat)
 		{
-			case YUV400:
-				if (u32LumaPicSize != pFile->Read(pReadYUV[0], u32LumaPicSize))
-				{
-					return EOF_YUVPlayer;
-				}
-				break;
+		case YUV400:
+			if (u32LumaPicSize != pFile->Read(pReadYUV[0], u32LumaPicSize))
+			{
+				return EOF_YUVPlayer;
+			}
+			break;
 
-			case YUV420:
-				if (u32LumaPicSize != pFile->Read(pReadYUV[0], u32LumaPicSize))
-				{
-					return EOF_YUVPlayer;
-				}
-				if (u32ChroPicSize != pFile->Read(pReadYUV[1], u32ChroPicSize))
-				{
-					return EOF_YUVPlayer;
-				}
-				if (u32ChroPicSize != pFile->Read(pReadYUV[2], u32ChroPicSize))
-				{
-					return EOF_YUVPlayer;
-				}
-				break;
+		case YUV420:
+			if (u32LumaPicSize != pFile->Read(pReadYUV[0], u32LumaPicSize))
+			{
+				return EOF_YUVPlayer;
+			}
+			if (u32ChroPicSize != pFile->Read(pReadYUV[1], u32ChroPicSize))
+			{
+				return EOF_YUVPlayer;
+			}
+			if (u32ChroPicSize != pFile->Read(pReadYUV[2], u32ChroPicSize))
+			{
+				return EOF_YUVPlayer;
+			}
+			break;
 
-			case YUV422:
-				if (u32LumaPicSize != pFile->Read(pReadYUV[0], u32LumaPicSize))
-				{
-					return EOF_YUVPlayer;
-				}
-				if (u32ChroPicSize != pFile->Read(pReadYUV[1], u32ChroPicSize))
-				{
-					return EOF_YUVPlayer;
-				}
-				if (u32ChroPicSize != pFile->Read(pReadYUV[2], u32ChroPicSize))
-				{
-					return EOF_YUVPlayer;
-				}
-				break;
+		case YUV422:
+			if (u32LumaPicSize != pFile->Read(pReadYUV[0], u32LumaPicSize))
+			{
+				return EOF_YUVPlayer;
+			}
+			if (u32ChroPicSize != pFile->Read(pReadYUV[1], u32ChroPicSize))
+			{
+				return EOF_YUVPlayer;
+			}
+			if (u32ChroPicSize != pFile->Read(pReadYUV[2], u32ChroPicSize))
+			{
+				return EOF_YUVPlayer;
+			}
+			break;
 
-#if ADDFORMAT
-			case RGB8:
-			case GBR8:
-			case YUV444:
-				if (u32LumaPicSize != pFile->Read(pReadYUV[0], u32LumaPicSize))
-				{
-					return EOF_YUVPlayer;
-				}
-				if (u32ChroPicSize != pFile->Read(pReadYUV[1], u32ChroPicSize))
-				{
-					return EOF_YUVPlayer;
-				}
-				if (u32ChroPicSize != pFile->Read(pReadYUV[2], u32ChroPicSize))
-				{
-					return EOF_YUVPlayer;
-				}
-				break;
+		case YUV444:
+		case RGB24:
+		case GBR24:
+			if (u32LumaPicSize != pFile->Read(pReadYUV[0], u32LumaPicSize))
+			{
+				return EOF_YUVPlayer;
+			}
+			if (u32ChroPicSize != pFile->Read(pReadYUV[1], u32ChroPicSize))
+			{
+				return EOF_YUVPlayer;
+			}
+			if (u32ChroPicSize != pFile->Read(pReadYUV[2], u32ChroPicSize))
+			{
+				return EOF_YUVPlayer;
+			}
+			break;
 
-#endif
-			case NV12:
-			case NV21:
-				if (u32LumaPicSize * 3 / 2 != pFile->Read(pReadYUV[0], u32LumaPicSize * 3 / 2))
-				{
-					return EOF_YUVPlayer;
-				}
-				break;
+		case NV12:
+		case NV21:
+			if (u32LumaPicSize != pFile->Read(pReadYUV[0], u32LumaPicSize))
+			{
+				return EOF_YUVPlayer;
+			}
+			if (u32ChroPicSize != pFile->Read(pReadYUV[1], u32ChroPicSize))
+			{
+				return EOF_YUVPlayer;
+			}
+			if (u32ChroPicSize != pFile->Read(pReadYUV[2], u32ChroPicSize))
+			{
+				return EOF_YUVPlayer;
+			}
+			break;
 
-			default:
-				break;
+		default:
+			break;
 		}
+	}
 
 	rotate_image(pReadYUV[0], pReadYUV[1], pReadYUV[2]);
 	mirror_image(pOrigYUV[0], pOrigYUV[1], pOrigYUV[2]);
@@ -915,7 +921,7 @@ void CImageDlg::OnMouseMove(UINT nFlags, CPoint point)
 		s32MBXIdx	= s32SrcX >> 4;
 		s32MBYIdx	= s32SrcY >> 4;
 
-#if LCU
+#if CONGIF_VIEW_LCU
 		s32SrcX = point.x * s32Width / s32ZoomWidth;
 		s32SrcY = point.y * s32Height / s32ZoomHeight;
 		s32MBXIdx_Lcu = s32SrcX >> 6;
@@ -937,7 +943,7 @@ void CImageDlg::OnLButtonDown(UINT nFlags, CPoint point)
 	s32ViewMBx	= s32CurrMBx;
 	s32ViewMBy	= s32CurrMBy;
 
-#if LCU
+#if CONGIF_VIEW_LCU
 	s32ViewMBx_Lcu = s32CurrMBx_Lcu;
 	s32ViewMBy_Lcu = s32CurrMBy_Lcu;
 #endif
@@ -978,7 +984,7 @@ void CImageDlg::OnRButtonDown(UINT nFlags, CPoint point)
 	s32SrcY		= point.y * s32Height / s32ZoomHeight;
 	s32MBXIdx	= s32SrcX >> 4;
 	s32MBYIdx	= s32SrcY >> 4;
-#if LCU
+#if CONGIF_VIEW_LCU
 	s32SrcX = point.x * s32Width / s32ZoomWidth;
 	s32SrcY = point.y * s32Height / s32ZoomHeight;
 	s32MBXIdx_Lcu = s32SrcX >> 6;
